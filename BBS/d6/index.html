@@ -1,0 +1,597 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Day 6: Functional Paradigms & Defensiveness</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
+
+        :root {
+            --bg-deep: #020617;
+            --emerald-dark: #064e3b;
+            --emerald-base: #10b981;
+            --emerald-light: #34d399;
+            --glass-bg: rgba(15, 23, 42, 0.65);
+            --glass-border: rgba(52, 211, 153, 0.25);
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --code-bg: #0f172a;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Inter', sans-serif;
+            background: radial-gradient(circle at top right, var(--emerald-dark), var(--bg-deep) 60%);
+            color: var(--text-main);
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+        }
+
+        /* Ambient Glow Elements */
+        .glow-sphere-1 {
+            position: absolute;
+            top: -10%;
+            left: -10%;
+            width: 50vw;
+            height: 50vw;
+            background: radial-gradient(circle, rgba(16, 185, 129, 0.15) 0%, transparent 70%);
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .glow-sphere-2 {
+            position: absolute;
+            bottom: -20%;
+            right: -10%;
+            width: 60vw;
+            height: 60vw;
+            background: radial-gradient(circle, rgba(6, 78, 59, 0.4) 0%, transparent 70%);
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        /* Main Glass Container */
+        #deck-container {
+            width: 90vw;
+            max-width: 1440px;
+            height: 85vh;
+            background: var(--glass-bg);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border);
+            border-radius: 24px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+            position: relative;
+            z-index: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        /* Top Progress Bar */
+        #progress-track {
+            width: 100%;
+            height: 5px;
+            background: rgba(255, 255, 255, 0.05);
+            position: absolute;
+            top: 0;
+            left: 0;
+            z-index: 10;
+        }
+
+        #progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--emerald-base), var(--emerald-light));
+            width: 0%;
+            transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 0 15px var(--emerald-base);
+        }
+
+        /* Slide Viewport */
+        #viewport {
+            flex-grow: 1;
+            padding: 50px 80px;
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+
+        .slide {
+            position: absolute;
+            top: 50px;
+            bottom: 50px;
+            left: 80px;
+            right: 80px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            opacity: 0;
+            transform: translateX(30px);
+            transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+            visibility: hidden;
+        }
+
+        .slide.active {
+            opacity: 1;
+            transform: translateX(0);
+            visibility: visible;
+        }
+
+        /* Typography */
+        h1 {
+            font-size: 4rem;
+            font-weight: 800;
+            margin-bottom: 20px;
+            letter-spacing: -1.5px;
+            line-height: 1.1;
+            background: linear-gradient(135deg, #ffffff 0%, var(--emerald-light) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        h2 {
+            font-size: 2.8rem;
+            font-weight: 700;
+            color: var(--emerald-base);
+            margin-bottom: 30px;
+            letter-spacing: -0.5px;
+        }
+
+        p, li {
+            font-size: 1.5rem;
+            line-height: 1.8;
+            color: var(--text-muted);
+            margin-bottom: 20px;
+        }
+
+        ul, ol {
+            margin-left: 30px;
+            padding-left: 10px;
+        }
+
+        li { margin-bottom: 15px; }
+
+        .highlight {
+            color: #ffffff;
+            font-weight: 500;
+            border-bottom: 2px solid var(--emerald-base);
+            padding-bottom: 2px;
+        }
+
+        .tag {
+            display: inline-block;
+            background: rgba(16, 185, 129, 0.15);
+            color: var(--emerald-light);
+            padding: 4px 12px;
+            border-radius: 6px;
+            font-size: 1.2rem;
+            font-weight: 600;
+            border: 1px solid rgba(16, 185, 129, 0.3);
+            margin-bottom: 20px;
+        }
+
+        /* Mac-Style Code Block */
+        .terminal {
+            background: var(--code-bg);
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            overflow: hidden;
+            margin-top: 30px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.5);
+            width: 100%;
+            max-width: 1000px;
+        }
+
+        .terminal-header {
+            background: #1e293b;
+            padding: 12px 20px;
+            display: flex;
+            gap: 8px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .dot { width: 12px; height: 12px; border-radius: 50%; }
+        .dot-red { background: #ef4444; }
+        .dot-yellow { background: #eab308; }
+        .dot-green { background: #22c55e; }
+
+        pre {
+            margin: 0;
+            padding: 25px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 1.25rem;
+            color: #e2e8f0;
+            overflow-x: auto;
+            line-height: 1.6;
+        }
+
+        /* Syntax Highlighting */
+        .cm { color: #64748b; font-style: italic; } /* Comment */
+        .kw { color: #c678dd; } /* Keyword */
+        .st { color: #34d399; } /* String */
+        .fn { color: #61afef; } /* Function */
+        .nm { color: #d19a66; } /* Number */
+        .op { color: #56b6c2; } /* Operator */
+
+        /* Navigation Footer */
+        #footer {
+            padding: 25px 50px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-top: 1px solid var(--glass-border);
+            background: rgba(0, 0, 0, 0.2);
+            z-index: 10;
+        }
+
+        .nav-btn {
+            background: rgba(16, 185, 129, 0.1);
+            border: 1px solid var(--emerald-base);
+            color: var(--emerald-light);
+            padding: 12px 30px;
+            font-size: 1.2rem;
+            font-weight: 600;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-family: 'Inter', sans-serif;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .nav-btn:hover:not(:disabled) {
+            background: var(--emerald-base);
+            color: #020617;
+            box-shadow: 0 0 20px rgba(16, 185, 129, 0.4);
+        }
+
+        .nav-btn:disabled {
+            border-color: rgba(255, 255, 255, 0.1);
+            color: rgba(255, 255, 255, 0.2);
+            background: transparent;
+            cursor: not-allowed;
+            box-shadow: none;
+        }
+
+        #counter {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 1.2rem;
+            color: var(--emerald-base);
+            font-weight: 500;
+            letter-spacing: 3px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="glow-sphere-1"></div>
+    <div class="glow-sphere-2"></div>
+
+    <div id="deck-container">
+        <div id="progress-track"><div id="progress-fill"></div></div>
+
+        <div id="viewport">
+            </div>
+        
+        <div id="footer">
+            <button id="btn-prev" class="nav-btn" onclick="navigate(-1)">&#8592; Prev</button>
+            <div id="counter">01 / 30</div>
+            <button id="btn-next" class="nav-btn" onclick="navigate(1)">Next &#8594;</button>
+        </div>
+    </div>
+
+    <script>
+        const slideData = [
+            `
+            <span class="tag">Module 6.1</span>
+            <h1>Python & Machine Learning</h1>
+            <h2>Day 6: Functional Paradigms & Defensiveness</h2>
+            <p>Evolving from raw procedural code to high-speed functional syntaxes, and engineering bulletproof pipelines that survive critical system failures.</p>
+            `,
+            `
+            <h2>Day 6 Objectives</h2>
+            <ul>
+                <li>Write mathematically dense algorithms using <span class="highlight">List & Dictionary Comprehensions</span>.</li>
+                <li>Understand the performance benefits of native C-level iterations.</li>
+                <li>Implement anonymous, single-line logic utilizing <strong>Lambda Expressions</strong>.</li>
+                <li>Protect production environments by engineering <strong>Defensive Architecture</strong>.</li>
+                <li>Master the <code>try-except-else-finally</code> control block.</li>
+            </ul>
+            `,
+            `
+            <h2>The Evolution of Code</h2>
+            <p>Up to this point, we have written <strong>Imperative Code</strong>. We tell Python exactly <em>how</em> to do something, step-by-step (create a list, start a loop, calculate a value, append it).</p>
+            <p>Modern Data Engineering heavily utilizes <strong>Declarative Code</strong>. We tell Python <em>what</em> we want, relying on highly optimized internal engines to figure out the fastest way to build it.</p>
+            `,
+            `
+            <h2>Introduction to Comprehensions</h2>
+            <p>A <span class="highlight">Comprehension</span> is a concise, declarative mechanism for constructing a new data structure (List, Dictionary, or Set) by transforming or filtering an existing sequence.</p>
+            <p>It collapses a multi-line <code>for</code> loop and an <code>.append()</code> operation into a highly readable, mathematically elegant single line of code.</p>
+            `,
+            `
+            <h2>The Standard Approach: For-Loops</h2>
+            <p>Consider the task of taking a list of raw loss values and squaring them to penalize outliers (a common ML technique).</p>
+            <div class="terminal">
+                <div class="terminal-header"><div class="dot dot-red"></div><div class="dot dot-yellow"></div><div class="dot dot-green"></div></div>
+                <pre>raw_errors <span class="op">=</span> [<span class="nm">2</span>, <span class="nm">4</span>, <span class="nm">6</span>, <span class="nm">8</span>]
+squared_errors <span class="op">=</span> []
+
+<span class="kw">for</span> error <span class="kw">in</span> raw_errors:
+    squared_errors.append(error <span class="op">**</span> <span class="nm">2</span>)
+    
+<span class="fn">print</span>(squared_errors) <span class="cm"># [4, 16, 36, 64]</span></pre>
+            </div>
+            `,
+            `
+            <h2>The Comprehension Approach</h2>
+            <p>We can rewrite the exact same logic declaratively. The syntax follows: <code>[expression for item in iterable]</code></p>
+            <div class="terminal">
+                <div class="terminal-header"><div class="dot dot-red"></div><div class="dot dot-yellow"></div><div class="dot dot-green"></div></div>
+                <pre>raw_errors <span class="op">=</span> [<span class="nm">2</span>, <span class="nm">4</span>, <span class="nm">6</span>, <span class="nm">8</span>]
+
+<span class="cm"># Single-line List Comprehension</span>
+squared_errors <span class="op">=</span> [error <span class="op">**</span> <span class="nm">2</span> <span class="kw">for</span> error <span class="kw">in</span> raw_errors]
+
+<span class="fn">print</span>(squared_errors) <span class="cm"># [4, 16, 36, 64]</span></pre>
+            </div>
+            `,
+            `
+            <h2>Adding Conditional Logic (Filtering)</h2>
+            <p>Comprehensions are not just for transformations; they are highly efficient filters. You can append an <code>if</code> statement to the end of the comprehension.</p>
+            <p>Syntax: <code>[expression for item in iterable if condition]</code></p>
+            `,
+            `
+            <h2>Filtering Example</h2>
+            <p>Extracting only the significant anomalies (values greater than 5) from a dataset.</p>
+            <div class="terminal">
+                <div class="terminal-header"><div class="dot dot-red"></div><div class="dot dot-yellow"></div><div class="dot dot-green"></div></div>
+                <pre>readings <span class="op">=</span> [<span class="nm">1.2</span>, <span class="nm">6.5</span>, <span class="nm">3.3</span>, <span class="nm">9.1</span>, <span class="nm">2.0</span>]
+
+<span class="cm"># Transform AND Filter in one line</span>
+anomalies <span class="op">=</span> [val <span class="kw">for</span> val <span class="kw">in</span> readings <span class="kw">if</span> val <span class="op">></span> <span class="nm">5.0</span>]
+
+<span class="fn">print</span>(anomalies) <span class="cm"># [6.5, 9.1]</span></pre>
+            </div>
+            `,
+            `
+            <h2>Why Comprehensions Matter</h2>
+            <p>Beyond being syntactically cleaner, comprehensions offer significant <span class="highlight">Performance Gains</span>.</p>
+            <p>A standard <code>for</code> loop using <code>.append()</code> requires Python to look up the append method in memory on every single iteration. Comprehensions bypass this overhead, running entirely at C-level speeds within the Python interpreter.</p>
+            `,
+            `
+            <h2>Dictionary Comprehensions</h2>
+            <p>The exact same syntax applies to dictionaries, substituting square brackets for curly braces and mapping a key to a value using a colon.</p>
+            <p>Syntax: <code>{key: value for item in iterable}</code></p>
+            `,
+            `
+            <h2>Executing Dictionary Comprehensions</h2>
+            <p>A common pipeline task: converting a list of string labels into a numerically encoded dictionary for a classification model.</p>
+            <div class="terminal">
+                <div class="terminal-header"><div class="dot dot-red"></div><div class="dot dot-yellow"></div><div class="dot dot-green"></div></div>
+                <pre>categories <span class="op">=</span> [<span class="st">"Spam"</span>, <span class="st">"Ham"</span>, <span class="st">"Unknown"</span>]
+
+<span class="cm"># Using enumerate() to get the index (i) and the label (cat)</span>
+encoding_map <span class="op">=</span> {cat: i <span class="kw">for</span> i, cat <span class="kw">in</span> <span class="fn">enumerate</span>(categories)}
+
+<span class="fn">print</span>(encoding_map) 
+<span class="cm"># {'Spam': 0, 'Ham': 1, 'Unknown': 2}</span></pre>
+            </div>
+            `,
+            `
+            <span class="tag">Module 6.2</span>
+            <h2>Anonymous Functions: The Lambda</h2>
+            <p>Standard functions defined by <code>def</code> are persistent; they live in memory under a specific name. But occasionally, we need a mathematical transformation that is so brief, naming it feels excessive.</p>
+            <p>A <span class="highlight">Lambda Function</span> is a small, anonymous function defined without a name.</p>
+            `,
+            `
+            <h2>Lambda Syntax Architecture</h2>
+            <p>A lambda expression evaluates a single, highly constrained mathematical or logical expression and immediately returns the result.</p>
+            <p>Syntax: <code>lambda arguments: expression</code></p>
+            `,
+            `
+            <h2>Lambda vs Def</h2>
+            <div class="terminal">
+                <div class="terminal-header"><div class="dot dot-red"></div><div class="dot dot-yellow"></div><div class="dot dot-green"></div></div>
+                <pre><span class="cm"># The Standard Approach</span>
+<span class="kw">def</span> <span class="fn">square</span>(x):
+    <span class="kw">return</span> x <span class="op">**</span> <span class="nm">2</span>
+
+<span class="cm"># The Lambda Approach</span>
+<span class="cm"># Takes 'x', executes 'x ** 2', implicitly returns result</span>
+lambda_square <span class="op">=</span> <span class="kw">lambda</span> x: x <span class="op">**</span> <span class="nm">2</span>
+
+<span class="fn">print</span>(lambda_square(<span class="nm">5</span>)) <span class="cm"># 25</span></pre>
+            </div>
+            `,
+            `
+            <h2>The True Purpose of Lambdas</h2>
+            <p>We rarely assign lambdas to variables. Their true power is serving as <span class="highlight">throwaway arguments</span> for higher-order functions (functions that accept other functions as inputs).</p>
+            <p>The most common scenario in data wrangling is overriding default sorting behaviors.</p>
+            `,
+            `
+            <h2>Custom Sorting in Data Pipelines</h2>
+            <p>If you have a list of user dictionaries, you cannot simply call <code>.sort()</code>. Python doesn't know which dictionary key it should use to rank the data.</p>
+            <p>We inject a lambda to extract the specific ranking metric.</p>
+            `,
+            `
+            <h2>Sorting Dictionaries via Lambda</h2>
+            <div class="terminal">
+                <div class="terminal-header"><div class="dot dot-red"></div><div class="dot dot-yellow"></div><div class="dot dot-green"></div></div>
+                <pre>users <span class="op">=</span> [
+    {<span class="st">"name"</span>: <span class="st">"Alice"</span>, <span class="st">"score"</span>: <span class="nm">85</span>},
+    {<span class="st">"name"</span>: <span class="st">"Bob"</span>, <span class="st">"score"</span>: <span class="nm">92</span>},
+    {<span class="st">"name"</span>: <span class="st">"Charlie"</span>, <span class="st">"score"</span>: <span class="nm">78</span>}
+]
+
+<span class="cm"># Sort the list IN PLACE based solely on the 'score' key</span>
+users.sort(key<span class="op">=</span><span class="kw">lambda</span> u: u[<span class="st">"score"</span>], reverse<span class="op">=</span><span class="kw">True</span>)
+
+<span class="cm"># Bob (92) is now at index 0</span></pre>
+            </div>
+            `,
+            `
+            <h2>Map, Filter, Reduce</h2>
+            <p>Lambdas form the bedrock of the classic functional programming trinity:</p>
+            <ul>
+                <li><strong>Map:</strong> Applies a lambda to every item in an iterable.</li>
+                <li><strong>Filter:</strong> Retains items where the lambda evaluates to True.</li>
+                <li><strong>Reduce:</strong> Cumulatively applies a lambda to reduce an iterable to a single value.</li>
+            </ul>
+            <p><em>Note: While powerful, comprehensions have largely replaced map/filter in modern Python for readability reasons.</em></p>
+            `,
+            `
+            <span class="tag">Module 6.3</span>
+            <h2>Transition to Defensive Programming</h2>
+            <p>Code that works perfectly on your machine will inevitably crash in production. Networks fail, files get deleted, and users input strings when you asked for integers.</p>
+            <p>A professional engineer never assumes the "Happy Path." They practice <span class="highlight">Defensive Programming</span>.</p>
+            `,
+            `
+            <h2>Syntax Errors vs. Exceptions</h2>
+            <ul>
+                <li><strong>Syntax Errors:</strong> You typed something wrong (missing a colon or parenthesis). The code will never even start running.</li>
+                <li><strong>Exceptions (Runtime Errors):</strong> The syntax is mathematically and structurally perfect, but an unexpected event during execution causes a catastrophic crash.</li>
+            </ul>
+            `,
+            `
+            <h2>The Threat of the Exception</h2>
+            <p>If an exception occurs (e.g., trying to read a CSV file that doesn't exist), Python halts execution immediately.</p>
+            <p>If this happens during hour 14 of a 15-hour Deep Learning training epoch, your entire progress is destroyed.</p>
+            `,
+            `
+            <h2>The try-except Block</h2>
+            <p>To defend the architecture, we utilize the <code>try-except</code> block. We instruct Python to "attempt" a dangerous operation.</p>
+            <p>If the operation triggers an exception, Python intercepts the crash, diverts the execution into the <code>except</code> block, and <span class="highlight">keeps the program alive</span>.</p>
+            `,
+            `
+            <h2>Implementing the Defense</h2>
+            <div class="terminal">
+                <div class="terminal-header"><div class="dot dot-red"></div><div class="dot dot-yellow"></div><div class="dot dot-green"></div></div>
+                <pre><span class="kw">try</span>:
+    <span class="cm"># The Dangerous Operation</span>
+    user_input <span class="op">=</span> <span class="fn">int</span>(<span class="fn">input</span>(<span class="st">"Enter batch size: "</span>))
+    result <span class="op">=</span> <span class="nm">1000</span> <span class="op">/</span> user_input
+    <span class="fn">print</span>(<span class="st">f"Processed {result} units per batch."</span>)
+
+<span class="kw">except</span> <span class="nm">ValueError</span>:
+    <span class="cm"># Triggered if user typed text instead of numbers</span>
+    <span class="fn">print</span>(<span class="st">"ERROR: Critical Failure. Integer required."</span>)</pre>
+            </div>
+            `,
+            `
+            <h2>Targeting Specific Exceptions</h2>
+            <p>A single try block can fail for multiple reasons. In the previous code, what if the user inputs <code>0</code>?</p>
+            <p>That triggers a <code>ZeroDivisionError</code>, not a <code>ValueError</code>. Professional code maps multiple except blocks to handle specific failures distinctly.</p>
+            `,
+            `
+            <h2>Handling Multiple Failures</h2>
+            <div class="terminal">
+                <div class="terminal-header"><div class="dot dot-red"></div><div class="dot dot-yellow"></div><div class="dot dot-green"></div></div>
+                <pre><span class="kw">try</span>:
+    batch_size <span class="op">=</span> <span class="fn">int</span>(<span class="fn">input</span>(<span class="st">"Enter batch: "</span>))
+    units <span class="op">=</span> <span class="nm">100</span> <span class="op">/</span> batch_size
+
+<span class="kw">except</span> <span class="nm">ValueError</span>:
+    <span class="fn">print</span>(<span class="st">"Data Corruption: Expected integer type."</span>)
+<span class="kw">except</span> <span class="nm">ZeroDivisionError</span>:
+    <span class="fn">print</span>(<span class="st">"Math Error: Cannot process zero batch size."</span>)</pre>
+            </div>
+            `,
+            `
+            <h2>The Bare Exception Trap</h2>
+            <p>It is possible to write a "bare" <code>except:</code> that catches absolutely every error.</p>
+            <p><strong>Never do this.</strong> It obscures true bugs (like a misspelled variable name) by silently catching them, making debugging large machine learning pipelines virtually impossible.</p>
+            `,
+            `
+            <h2>The 'else' Clause</h2>
+            <p>The <code>try-except</code> structure contains two optional clauses. The first is <code>else</code>.</p>
+            <p>The code inside the <code>else</code> block executes <span class="highlight">only if</span> the try block was completely successful without triggering a single exception.</p>
+            `,
+            `
+            <h2>The 'finally' Clause</h2>
+            <p>The final layer of defense is the <code>finally</code> block.</p>
+            <p>This code executes absolutely unconditionally. Regardless of whether the try block succeeded, failed, or the program is crashing, the <code>finally</code> block runs to ensure database connections are closed and memory is freed.</p>
+            `,
+            `
+            <h2>Day 6 Summary</h2>
+            <ul>
+                <li><strong>Comprehensions:</strong> Collapse loop logic into elegant, high-speed single lines using <code>[x for x in data]</code>.</li>
+                <li><strong>Lambdas:</strong> Anonymous, single-expression functions heavily utilized as custom sorting keys.</li>
+                <li><strong>Defensive Coding:</strong> Wrap dangerous operations in <code>try</code> blocks; handle specific failures in <code>except</code> blocks; use <code>finally</code> to guarantee resource cleanup.</li>
+            </ul>
+            `,
+            `
+            <h2>Next Steps & Lab Setup</h2>
+            <p><span class="highlight">Practical Tasks:</span></p>
+            <ol>
+                <li>Convert a 10-line data cleaning loop into a single List Comprehension.</li>
+                <li>Write a robust Division Calculator that safely handles text inputs and zero-division using <code>try-except</code>.</li>
+            </ol>
+            <p><em>Prepare for Day 7: Checkpoint Project - Automated Directory Organizer & Encryptor.</em></p>
+            `
+        ];
+
+        let currentIndex = 0;
+        const viewport = document.getElementById('viewport');
+        const progressFill = document.getElementById('progress-fill');
+        const counter = document.getElementById('counter');
+        const btnPrev = document.getElementById('btn-prev');
+        const btnNext = document.getElementById('btn-next');
+
+        function initDeck() {
+            slideData.forEach((htmlContent, index) => {
+                const slideDiv = document.createElement('div');
+                slideDiv.className = 'slide';
+                slideDiv.id = 'slide-' + index;
+                slideDiv.innerHTML = htmlContent;
+                viewport.appendChild(slideDiv);
+            });
+            updateState();
+        }
+
+        function navigate(step) {
+            const nextIndex = currentIndex + step;
+            if (nextIndex >= 0 && nextIndex < slideData.length) {
+                currentIndex = nextIndex;
+                updateState();
+            }
+        }
+
+        function updateState() {
+            const slides = document.querySelectorAll('.slide');
+            slides.forEach((slide, index) => {
+                if (index === currentIndex) {
+                    slide.classList.add('active');
+                    slide.style.transform = 'translateX(0)';
+                } else if (index < currentIndex) {
+                    slide.classList.remove('active');
+                    slide.style.transform = 'translateX(-50px)';
+                } else {
+                    slide.classList.remove('active');
+                    slide.style.transform = 'translateX(50px)';
+                }
+            });
+
+            const percent = ((currentIndex + 1) / slideData.length) * 100;
+            progressFill.style.width = percent + '%';
+
+            const formattedCurrent = (currentIndex + 1).toString().padStart(2, '0');
+            counter.innerText = formattedCurrent + ' / ' + slideData.length;
+
+            btnPrev.disabled = currentIndex === 0;
+            btnNext.disabled = currentIndex === slideData.length - 1;
+        }
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowRight' || e.key === ' ') navigate(1);
+            if (e.key === 'ArrowLeft') navigate(-1);
+        });
+
+        initDeck();
+    </script>
+</body>
+</html>
