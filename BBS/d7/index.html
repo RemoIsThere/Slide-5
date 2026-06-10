@@ -1,0 +1,635 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Day 7: Persistence, File I/O & Checkpoint Architecture</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
+
+        :root {
+            --bg-deep: #020617;
+            --emerald-dark: #064e3b;
+            --emerald-base: #10b981;
+            --emerald-light: #34d399;
+            --glass-bg: rgba(15, 23, 42, 0.65);
+            --glass-border: rgba(52, 211, 153, 0.25);
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --code-bg: #0f172a;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Inter', sans-serif;
+            background: radial-gradient(circle at top right, var(--emerald-dark), var(--bg-deep) 60%);
+            color: var(--text-main);
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+        }
+
+        /* Ambient Glow Elements */
+        .glow-sphere-1 {
+            position: absolute;
+            top: -10%;
+            left: -10%;
+            width: 50vw;
+            height: 50vw;
+            background: radial-gradient(circle, rgba(16, 185, 129, 0.15) 0%, transparent 70%);
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .glow-sphere-2 {
+            position: absolute;
+            bottom: -20%;
+            right: -10%;
+            width: 60vw;
+            height: 60vw;
+            background: radial-gradient(circle, rgba(6, 78, 59, 0.4) 0%, transparent 70%);
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        /* Main Glass Container */
+        #deck-container {
+            width: 90vw;
+            max-width: 1440px;
+            height: 85vh;
+            background: var(--glass-bg);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border);
+            border-radius: 24px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+            position: relative;
+            z-index: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        /* Top Progress Bar */
+        #progress-track {
+            width: 100%;
+            height: 5px;
+            background: rgba(255, 255, 255, 0.05);
+            position: absolute;
+            top: 0;
+            left: 0;
+            z-index: 10;
+        }
+
+        #progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--emerald-base), var(--emerald-light));
+            width: 0%;
+            transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 0 15px var(--emerald-base);
+        }
+
+        /* Slide Viewport */
+        #viewport {
+            flex-grow: 1;
+            padding: 50px 80px;
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+
+        .slide {
+            position: absolute;
+            top: 50px;
+            bottom: 50px;
+            left: 80px;
+            right: 80px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            opacity: 0;
+            transform: translateX(30px);
+            transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+            visibility: hidden;
+        }
+
+        .slide.active {
+            opacity: 1;
+            transform: translateX(0);
+            visibility: visible;
+        }
+
+        /* Typography */
+        h1 {
+            font-size: 4rem;
+            font-weight: 800;
+            margin-bottom: 20px;
+            letter-spacing: -1.5px;
+            line-height: 1.1;
+            background: linear-gradient(135deg, #ffffff 0%, var(--emerald-light) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        h2 {
+            font-size: 2.8rem;
+            font-weight: 700;
+            color: var(--emerald-base);
+            margin-bottom: 30px;
+            letter-spacing: -0.5px;
+        }
+
+        p, li {
+            font-size: 1.5rem;
+            line-height: 1.8;
+            color: var(--text-muted);
+            margin-bottom: 20px;
+        }
+
+        ul, ol {
+            margin-left: 30px;
+            padding-left: 10px;
+        }
+
+        li { margin-bottom: 15px; }
+
+        .highlight {
+            color: #ffffff;
+            font-weight: 500;
+            border-bottom: 2px solid var(--emerald-base);
+            padding-bottom: 2px;
+        }
+
+        .tag {
+            display: inline-block;
+            background: rgba(16, 185, 129, 0.15);
+            color: var(--emerald-light);
+            padding: 4px 12px;
+            border-radius: 6px;
+            font-size: 1.2rem;
+            font-weight: 600;
+            border: 1px solid rgba(16, 185, 129, 0.3);
+            margin-bottom: 20px;
+        }
+
+        /* Mac-Style Code Block */
+        .terminal {
+            background: var(--code-bg);
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            overflow: hidden;
+            margin-top: 20px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.5);
+            width: 100%;
+            max-width: 1000px;
+        }
+
+        .terminal-header {
+            background: #1e293b;
+            padding: 12px 20px;
+            display: flex;
+            gap: 8px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .dot { width: 12px; height: 12px; border-radius: 50%; }
+        .dot-red { background: #ef4444; }
+        .dot-yellow { background: #eab308; }
+        .dot-green { background: #22c55e; }
+
+        pre {
+            margin: 0;
+            padding: 25px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 1.25rem;
+            color: #e2e8f0;
+            overflow-x: auto;
+            line-height: 1.6;
+        }
+
+        /* Syntax Highlighting */
+        .cm { color: #64748b; font-style: italic; } /* Comment */
+        .kw { color: #c678dd; } /* Keyword */
+        .st { color: #34d399; } /* String */
+        .fn { color: #61afef; } /* Function */
+        .nm { color: #d19a66; } /* Number */
+        .op { color: #56b6c2; } /* Operator */
+
+        /* Navigation Footer */
+        #footer {
+            padding: 25px 50px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-top: 1px solid var(--glass-border);
+            background: rgba(0, 0, 0, 0.2);
+            z-index: 10;
+        }
+
+        .nav-btn {
+            background: rgba(16, 185, 129, 0.1);
+            border: 1px solid var(--emerald-base);
+            color: var(--emerald-light);
+            padding: 12px 30px;
+            font-size: 1.2rem;
+            font-weight: 600;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-family: 'Inter', sans-serif;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .nav-btn:hover:not(:disabled) {
+            background: var(--emerald-base);
+            color: #020617;
+            box-shadow: 0 0 20px rgba(16, 185, 129, 0.4);
+        }
+
+        .nav-btn:disabled {
+            border-color: rgba(255, 255, 255, 0.1);
+            color: rgba(255, 255, 255, 0.2);
+            background: transparent;
+            cursor: not-allowed;
+            box-shadow: none;
+        }
+
+        #counter {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 1.2rem;
+            color: var(--emerald-base);
+            font-weight: 500;
+            letter-spacing: 3px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="glow-sphere-1"></div>
+    <div class="glow-sphere-2"></div>
+
+    <div id="deck-container">
+        <div id="progress-track"><div id="progress-fill"></div></div>
+
+        <div id="viewport">
+            </div>
+        
+        <div id="footer">
+            <button id="btn-prev" class="nav-btn" onclick="navigate(-1)">&#8592; Prev</button>
+            <div id="counter">01 / 30</div>
+            <button id="btn-next" class="nav-btn" onclick="navigate(1)">Next &#8594;</button>
+        </div>
+    </div>
+
+    <script>
+        const slideData = [
+            `
+            <span class="tag">Module 7.1</span>
+            <h1>Python & Machine Learning</h1>
+            <h2>Day 7: Persistence, File I/O & Checkpoint Architecture</h2>
+            <p>Moving from temporary memory storage to permanent persistence. Learning how to manage files securely and map systems for the automated sorting checkpoint project.</p>
+            `,
+            `
+            <h2>Day 7 Objectives</h2>
+            <ul>
+                <li>Understand the concept of <span class="highlight">Data Persistence</span> vs. volatile RAM.</li>
+                <li>Implement bulletproof resource allocation via <strong>Context Managers</strong>.</li>
+                <li>Master parsing mechanics across text and binary file streams.</li>
+                <li>Navigate operating system file structures natively using <code>os</code> and <code>pathlib</code>.</li>
+                <li>Deconstruct the production blueprint for *Mini-Project 4: Automated Directory Organizer & Encryptor*.</li>
+            </ul>
+            `,
+            `
+            <h2>The Volatility Threat</h2>
+            <p>Up to this point, our variables, lists, and dictionaries have lived exclusively inside the computer's **Random Access Memory (RAM)**.</p>
+            <p>RAM is volatile. The split second your script finishes executing, or if a sudden power loss occurs, your entire data state disappears forever. We need non-volatile storage.</p>
+            `,
+            `
+            <h2>Introduction to File Streams</h2>
+            <p>To persist data across application lifetimes, software connects to the computer's storage drive via <span class="highlight">Streams</span>.</p>
+            <p>A stream is an architectural abstraction representing a continuous flow of sequential data moving from a physical source into your program, or vice-versa.</p>
+            `,
+            `
+            <h2>The Historical Baseline: open()</h2>
+            <p>Natively, Python establishes file streams using the built-in <code>open()</code> function. It requires two primitive string arguments:</p>
+            <ol>
+                <li><strong>File Path:</strong> The absolute or relative location on the hard drive.</li>
+                <li><strong>Mode:</strong> Instruction detailing whether we are reading, writing, or appending.</li>
+            </ol>
+            `,
+            `
+            <h2>The Legacy Pattern</h2>
+            <div class="terminal">
+                <div class="terminal-header"><div class="dot dot-red"></div><div class="dot dot-yellow"></div><div class="dot dot-green"></div></div>
+                <pre><span class="cm"># Establishing an input stream explicitly</span>
+file_ptr <span class="op">=</span> <span class="fn">open</span>(<span class="st">"dataset_log.txt"</span>, <span class="st">"r"</span>)
+content <span class="op">=</span> file_ptr.read()
+
+<span class="cm"># CRITICAL: Releasing system hardware bindings manually</span>
+file_ptr.close()</pre>
+            </div>
+            `,
+            `
+            <h2>The Trap of Manual Operations</h2>
+            <p>Relying on manual stream termination (<code>.close()</code>) is a dangerous anti-pattern.</p>
+            <p>If an exception occurs on line 3, your program will crash *before* it ever reaches the close operation. The operating system keeps that file locked in memory, creating a severe resource leak that can lock up systemic pipelines.</p>
+            `,
+            `
+            <h2>The Modern Standard: Context Managers</h2>
+            <p>To eliminate manual resource tracking, Python uses <strong>Context Managers</strong> via the <code>with</code> statement.</p>
+            <p>A context manager guarantees that regardless of success, structural branching, or catastrophic application runtime exceptions, the file pointer is <span class="highlight">instantly and automatically closed</span> the moment execution exits the block.</p>
+            `,
+            `
+            <h2>Context Managers in Production</h2>
+            <div class="terminal">
+                <div class="terminal-header"><div class="dot dot-red"></div><div class="dot dot-yellow"></div><div class="dot dot-green"></div></div>
+                <pre><span class="cm"># Enforcing structural safety via context managers</span>
+<span class="kw">with</span> <span class="fn">open</span>(<span class="st">"model_metrics.csv"</span>, <span class="st">"r"</span>) <span class="kw">as</span> file_ptr:
+    data <span class="op">=</span> file_ptr.read()
+    <span class="cm"># Calculations occur safely inside the block</span>
+    
+<span class="cm"># Outside the block, file_ptr is ALREADY structurally closed</span></pre>
+            </div>
+            `,
+            `
+            <span class="tag">Module 7.2</span>
+            <h2>File Modes Deep Dive: Reading Text</h2>
+            <p>The standard mode string <code>"r"</code> boots up a text-only input stream. Python provides three distinct parsing architectures based on memory constraints:</p>
+            <ul>
+                <li><code>.read()</code>: Pulls the absolute entirety of the file into a single massive string.</li>
+                <li><code>.readline()</code>: Captures only the single next sequential line.</li>
+                <li><code>.readlines()</code>: Parses the file and structures it into a list of separate strings.</li>
+            </ul>
+            `,
+            `
+            <h2>The Out-Of-Memory Vulnerability</h2>
+            <p>Using <code>.read()</code> or <code>.readlines()</code> on enterprise datasets is a dangerous practice.</p>
+            <p>If your CSV training file is 16 Gigabytes large and your machine only possesses 8 Gigabytes of available RAM, pulling the entire file into memory at once will cause a kernel panic and crash the system.</p>
+            `,
+            `
+            <h2>The Professional Standard: Iterator Reading</h2>
+            <p>Because file objects are native iterables, you can stream them line-by-line using a <code>for</code> loop without loading the entire file into memory at once.</p>
+            <div class="terminal">
+                <div class="terminal-header"><div class="dot dot-red"></div><div class="dot dot-yellow"></div><div class="dot dot-green"></div></div>
+                <pre><span class="kw">with</span> <span class="fn">open</span>(<span class="st">"massive_dataset.csv"</span>, <span class="st">"r"</span>) <span class="kw">as</span> file_ptr:
+    <span class="cm"># Python loads ONLY one row into RAM at any given millisecond</span>
+    <span class="kw">for</span> row <span class="kw">in</span> file_ptr:
+        process_row_logic(row)</pre>
+            </div>
+            `,
+            `
+            <h2>File Modes Deep Dive: Writing Text</h2>
+            <p>To persist outputs, we utilize alternative flags inside our context allocation:</p>
+            <ul>
+                <li><code>"w"</code> (Write Mode): <span class="highlight">Destructive</span> operation. If the target file already exists, it is instantly wiped to zero bytes before writing. If it doesn't exist, it is created.</li>
+                <li><code>"a"</code> (Append Mode): Non-destructive. Appends new data directly onto the absolute end of the file.</li>
+            </ul>
+            `,
+            `
+            <h2>Writing Operations in Action</h2>
+            <div class="terminal">
+                <div class="terminal-header"><div class="dot dot-red"></div><div class="dot dot-yellow"></div><div class="dot dot-green"></div></div>
+                <pre><span class="kw">with</span> <span class="fn">open</span>(<span class="st">"system_logs.txt"</span>, <span class="st">"a"</span>) <span class="kw">as</span> logger:
+    <span class="cm"># \\n enforces immediate row advancement</span>
+    logger.write(<span class="st">"CRITICAL: Epoch 5 validation loss spiked.\\n"</span>)</pre>
+            </div>
+            `,
+            `
+            <h2>Handling Binary Streams</h2>
+            <p>Not all data is flat text. Image matrices, video datasets, and compiled models cannot be parsed as Unicode characters.</p>
+            <p>By appending a <code>b</code> to the mode strings (<code>"rb"</code> or <code>"wb"</code>), we bypass text interpreters and interact with raw, unparsed <span class="highlight">byte objects</span>.</p>
+            `,
+            `
+            <span class="tag">Module 7.3</span>
+            <h2>Interfacing with the Host OS</h2>
+            <p>To construct automated sorting workflows, reading file content isn't enough. Programs must be able to scan directories, detect structures, and move items across folders.</p>
+            <p>Python provides this access through native system wrappers, primarily the <code>os</code> module.</p>
+            `,
+            `
+            <h2>Directory Mapping via os</h2>
+            <div class="terminal">
+                <div class="terminal-header"><div class="dot dot-red"></div><div class="dot dot-yellow"></div><div class="dot dot-green"></div></div>
+                <pre><span class="kw">import</span> os
+
+<span class="cm"># Map all items within the target path into a standard list</span>
+directory_contents <span class="op">=</span> os.listdir(<span class="st">"/home/user/downloads"</span>)
+<span class="fn">print</span>(directory_contents)
+
+<span class="cm"># Generate new directory pathways on the hard drive</span>
+os.mkdir(<span class="st">"/home/user/downloads/processed_data"</span>)</pre>
+            </div>
+            `,
+            `
+            <h2>The Pitfall of Manual Path Concatenation</h2>
+            <p>When combining a folder path with a file name, writing <code>folder + "/" + file</code> introduces substantial platform risk.</p>
+            <p>Windows relies on backslashes (<code>\\</code>) for file structures, while POSIX systems (Linux/Mac) require forward slashes (<code>/</code>). Manual string concatenation introduces bugs across different operating systems.</p>
+            `,
+            `
+            <h2>Cross-Platform Portability: os.path</h2>
+            <p>The <code>os.path</code> submodule evaluates the host operating system at runtime and automatically constructs path strings matching its native format.</p>
+            <div class="terminal">
+                <div class="terminal-header"><div class="dot dot-red"></div><div class="dot dot-yellow"></div><div class="dot dot-green"></div></div>
+                <pre><span class="kw">import</span> os
+
+target_dir <span class="op">=</span> <span class="st">"datasets"</span>
+filename <span class="op">=</span> <span class="st">"churn_metrics.csv"</span>
+
+<span class="cm"># Safe path generation on any operating system</span>
+secure_path <span class="op">=</span> os.path.join(target_dir, filename)</pre>
+            </div>
+            `,
+            `
+            <h2>Isolating Metadata via splitext</h2>
+            <p>To sort files by their type, programs must extract file extensions reliably. <code>os.path.splitext()</code> isolates file extensions cleanly by splitting a path into a base name and its extension suffix.</p>
+            <div class="terminal">
+                <div class="terminal-header"><div class="dot dot-red"></div><div class="dot dot-yellow"></div><div class="dot dot-green"></div></div>
+                <pre><span class="kw">import</span> os
+
+file_target <span class="op">=</span> <span class="st">"raw_image.PNG"</span>
+base_name, extension <span class="op">=</span> os.path.splitext(file_target)
+
+<span class="fn">print</span>(extension) <span class="cm"># Output: ".PNG"</span></pre>
+            </div>
+            `,
+            `
+            <h2>Modern Alternative: pathlib</h2>
+            <p>Introduced in modern Python specifications, the <code>pathlib</code> library transitions paths from raw string manipulation into high-level, intuitive objects.</p>
+            <div class="terminal">
+                <div class="terminal-header"><div class="dot dot-red"></div><div class="dot dot-yellow"></div><div class="dot dot-green"></div></div>
+                <pre><span class="kw">from</span> pathlib <span class="kw">import</span> Path
+
+<span class="cm"># Instantiate path object</span>
+directory <span class="op">=</span> Path(<span class="st">"my_project/source_files"</span>)
+<span class="kw">for</span> item <span class="kw">in</span> directory.iterdir():
+    <span class="kw">if</span> item.is_file():
+        <span class="fn">print</span>(<span class="st">f"File detected: {item.name} | Suffix: {item.suffix}"</span>)</pre>
+            </div>
+            `,
+            `
+            <h2>High-Level File Management: shutil</h2>
+            <p>While <code>os</code> manages low-level system operations, moving and copying file targets across folders requires the <code>shutil</code> (Shell Utilities) standard module.</p>
+            <div class="terminal">
+                <div class="terminal-header"><div class="dot dot-red"></div><div class="dot dot-yellow"></div><div class="dot dot-green"></div></div>
+                <pre><span class="kw">import</span> shutil
+
+src <span class="op">=</span> <span class="st">"datasets/churn_metrics.csv"</span>
+dst <span class="op">=</span> <span class="st">"archived_data/churn_metrics.csv"</span>
+
+<span class="cm"># Move file target locations cleanly across paths</span>
+shutil.move(src, dst)</pre>
+            </div>
+            `,
+            `
+            <span class="tag">Checkpoint Milestone</span>
+            <h2>Blueprint: Mini-Project 4</h2>
+            <p>We are now ready to design the architecture for **Mini-Project 4: Automated Directory Organizer & Encryptor**.</p>
+            <p>This system scans a cluttered workspace directory, parses file extensions dynamically, maps types into distinct operational folders, and logs its activities defensively.</p>
+            `,
+            `
+            <h2>The Architectural Plan</h2>
+            <p>The program follows a modular data flow pipeline:</p>
+            <ol>
+                <li><strong>Ingestion:</strong> Scan a target directory using <code>os.listdir()</code> or <code>Path.iterdir()</code>.</li>
+                <li><strong>Classification:</strong> Isolate extensions and categorize them into mapped groups (Images, Documents, Datasets).</li>
+                <li><strong>Restructuring:</strong> Verify target directory existence, create paths dynamically, and move elements safely using <code>shutil.move()</code>.</li>
+                <li><strong>Logging:</strong> Generate a persistent execution log inside a <code>try-except</code> block.</li>
+            </ol>
+            `,
+            `
+            <h2>Defining the Category Map</h2>
+            <p>We leverage a structured associative map (dictionary) to establish sorting categories and guide the classification engine:</p>
+            <div class="terminal">
+                <div class="terminal-header"><div class="dot dot-red"></div><div class="dot dot-yellow"></div><div class="dot dot-green"></div></div>
+                <pre>SORTING_RULES <span class="op">=</span> {
+    <span class="st">".csv"</span>: <span class="st">"Datasets"</span>, <span class="st">".json"</span>: <span class="st">"Datasets"</span>,
+    <span class="st">".pdf"</span>: <span class="st">"Documents"</span>, <span class="st">".txt"</span>: <span class="st">"Documents"</span>,
+    <span class="st">".png"</span>: <span class="st">"Media"</span>, <span class="st">".jpg"</span>: <span class="st">"Media"</span>
+}</pre>
+            </div>
+            `,
+            `
+            <h2>Core Sorting Engine Logic</h2>
+            <div class="terminal">
+                <div class="terminal-header"><div class="dot dot-red"></div><div class="dot dot-yellow"></div><div class="dot dot-green"></div></div>
+                <pre><span class="kw">def</span> <span class="fn">organize_directory</span>(target_path):
+    <span class="kw">for</span> filename <span class="kw">in</span> os.listdir(target_path):
+        full_path <span class="op">=</span> os.path.join(target_path, filename)
+        <span class="kw">if</span> os.path.isfile(full_path):
+            base, ext <span class="op">=</span> os.path.splitext(filename)
+            ext <span class="op">=</span> ext.lower()
+            <span class="kw">if</span> ext <span class="kw">in</span> SORTING_RULES:
+                folder_name <span class="op">=</span> SORTING_RULES[ext]
+                route_file(target_path, filename, folder_name)</pre>
+            </div>
+            `,
+            `
+            <h2>The Routing & Allocation Protocol</h2>
+            <div class="terminal">
+                <div class="terminal-header"><div class="dot dot-red"></div><div class="dot dot-yellow"></div><div class="dot dot-green"></div></div>
+                <pre><span class="kw">def</span> <span class="fn">route_file</span>(base_path, filename, folder_name):
+    destination_folder <span class="op">=</span> os.path.join(base_path, folder_name)
+    <span class="kw">if</span> <span class="kw">not</span> os.path.exists(destination_folder):
+        os.mkdir(destination_folder)
+        
+    src_file <span class="op">=</span> os.path.join(base_path, filename)
+    dst_file <span class="op">=</span> os.path.join(destination_folder, filename)
+    shutil.move(src_file, dst_file)</pre>
+            </div>
+            `,
+            `
+            <h2>Defensive Integration: Error Isolation</h2>
+            <p>File mutations can fail due to permission lockouts or corruption errors. We wrap our file routing logic in structural try-except blocks to insulate the loop from crashes.</p>
+            <div class="terminal">
+                <div class="terminal-header"><div class="dot dot-red"></div><div class="dot dot-yellow"></div><div class="dot dot-green"></div></div>
+                <pre><span class="kw">try</span>:
+    shutil.move(src_file, dst_file)
+<span class="kw">except</span> <span class="nm">PermissionError</span>:
+    <span class="fn">print</span>(<span class="st">f"Access Denied: Cannot modify {filename}"</span>)
+<span class="kw">except</span> <span class="nm">Exception</span> <span class="kw">as</span> err:
+    <span class="fn">print</span>(<span class="st">f"System Fault: {err}"</span>)</pre>
+            </div>
+            `,
+            `
+            <h2>Day 7 Summary</h2>
+            <ul>
+                <li><strong>Persistence:</strong> Non-volatile file I/O operations secure your data across application runtimes.</li>
+                <li><strong>Context Managers:</strong> The <code>with</code> statement handles system stream allocation cleanly, preventing resource leaks automatically.</li>
+                <li><strong>OS Systems:</strong> <code>os.path.join</code> and <code>pathlib</code> enable portable, cross-platform path management.</li>
+                <li><strong>Milestone:</strong> Mini-Project 4 synthesizes file mapping, structural loops, conditional routing, and error logging into a clean application blueprint.</li>
+            </ul>
+            `,
+            `
+            <h2>Next Steps & Lab Setup</h2>
+            <p><span class="highlight">Practical Deliverables:</span></p>
+            <ol>
+                <li>Implement and execute the directory organizer on a folder of sample mock files on your machine.</li>
+                <li>Add a text logging engine that appends runtime activity stamps into an automated <code>activity_report.log</code> file.</li>
+            </ol>
+            <p><em>Congratulations on completing Part I & Part II. Tomorrow, we start Part III: Data Wrangling & Numerical Computation with NumPy!</em></p>
+            `
+        ];
+
+        let currentIndex = 0;
+        const viewport = document.getElementById('viewport');
+        const progressFill = document.getElementById('progress-fill');
+        const counter = document.getElementById('counter');
+        const btnPrev = document.getElementById('btn-prev');
+        const btnNext = document.getElementById('btn-next');
+
+        function initDeck() {
+            slideData.forEach((htmlContent, index) => {
+                const slideDiv = document.createElement('div');
+                slideDiv.className = 'slide';
+                slideDiv.id = 'slide-' + index;
+                slideDiv.innerHTML = htmlContent;
+                viewport.appendChild(slideDiv);
+            });
+            updateState();
+        }
+
+        function navigate(step) {
+            const nextIndex = currentIndex + step;
+            if (nextIndex >= 0 && nextIndex < slideData.length) {
+                currentIndex = nextIndex;
+                updateState();
+            }
+        }
+
+        function updateState() {
+            const slides = document.querySelectorAll('.slide');
+            slides.forEach((slide, index) => {
+                if (index === currentIndex) {
+                    slide.classList.add('active');
+                    slide.style.transform = 'translateX(0)';
+                } else if (index < currentIndex) {
+                    slide.classList.remove('active');
+                    slide.style.transform = 'translateX(-50px)';
+                } else {
+                    slide.classList.remove('active');
+                    slide.style.transform = 'translateX(50px)';
+                }
+            });
+
+            const percent = ((currentIndex + 1) / slideData.length) * 100;
+            progressFill.style.width = percent + '%';
+
+            const formattedCurrent = (currentIndex + 1).toString().padStart(2, '0');
+            counter.innerText = formattedCurrent + ' / ' + slideData.length;
+
+            btnPrev.disabled = currentIndex === 0;
+            btnNext.disabled = currentIndex === slideData.length - 1;
+        }
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowRight' || e.key === ' ') navigate(1);
+            if (e.key === 'ArrowLeft') navigate(-1);
+        });
+
+        initDeck();
+    </script>
+</body>
+</html>
