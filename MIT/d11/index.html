@@ -1,0 +1,529 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>System Design & Industry Readiness</title>
+    <style>
+        :root {
+            --bg-color: #1a1a24;
+            --deck-bg: #252533;
+            --text-main: #e0e0e0;
+            --accent: #00d2ff;
+            --accent-hover: #0099cc;
+        }
+
+        body {
+            margin: 0;
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .deck-container {
+            position: relative;
+            width: 85vw;
+            height: 50vw;
+            max-width: 1024px;
+            max-height: 600px;
+            background-color: var(--deck-bg);
+            border-radius: 12px;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.6);
+            overflow: hidden;
+        }
+
+        .slide {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            padding: 50px 60px;
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.5s ease, visibility 0.5s ease;
+        }
+
+        .slide.active {
+            opacity: 1;
+            visibility: visible;
+            z-index: 10;
+        }
+
+        .title-slide {
+            align-items: center;
+            text-align: center;
+        }
+
+        h1 {
+            color: var(--accent);
+            font-size: 3rem;
+            margin-bottom: 20px;
+        }
+
+        h2 {
+            color: var(--accent);
+            font-size: 2.2rem;
+            border-bottom: 2px solid rgba(0, 210, 255, 0.3);
+            padding-bottom: 10px;
+            margin-top: 0;
+            margin-bottom: 30px;
+        }
+
+        p.subtitle {
+            font-size: 1.5rem;
+            color: #aaa;
+        }
+
+        ul {
+            font-size: 1.3rem;
+            line-height: 1.8;
+            margin: 0;
+            padding-left: 30px;
+        }
+
+        li {
+            margin-bottom: 15px;
+        }
+
+        li span {
+            color: var(--accent);
+            font-weight: bold;
+        }
+
+        .controls {
+            position: absolute;
+            bottom: 20px;
+            right: 30px;
+            z-index: 20;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            background: rgba(0,0,0,0.4);
+            padding: 10px 20px;
+            border-radius: 30px;
+        }
+
+        button {
+            background-color: var(--accent);
+            color: #000;
+            border: none;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            font-size: 1.2rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background 0.2s;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        button:hover:not(:disabled) {
+            background-color: var(--accent-hover);
+        }
+
+        button:disabled {
+            background-color: #555;
+            color: #888;
+            cursor: not-allowed;
+        }
+
+        .counter {
+            font-size: 1.1rem;
+            font-family: monospace;
+            color: #ccc;
+            min-width: 60px;
+            text-align: center;
+        }
+
+        .progress-bar {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            height: 4px;
+            background-color: var(--accent);
+            transition: width 0.3s ease;
+            z-index: 20;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="deck-container">
+        
+        <div class="slide title-slide active">
+            <h1>System Design & Industry Readiness</h1>
+            <p class="subtitle">Mastering HLD, LLD, Scalability, and Interview Preparation</p>
+        </div>
+
+        <div class="slide">
+            <h2>Agenda</h2>
+            <ul>
+                <li>Introduction to System Design</li>
+                <li>High-Level Design (HLD) vs Low-Level Design (LLD)</li>
+                <li>Core Scalability Concepts</li>
+                <li>Advanced Architecture Patterns</li>
+                <li>Company-Wise Problem Solving (FAANG)</li>
+                <li>Industry Readiness & Interview Strategy</li>
+            </ul>
+        </div>
+
+        <div class="slide">
+            <h2>What is System Design?</h2>
+            <ul>
+                <li><span>Definition:</span> The process of defining the architecture, components, modules, interfaces, and data for a system to satisfy specified requirements.</li>
+                <li><span>Why it matters:</span> Bridges the gap between raw coding and building production-ready, scalable applications.</li>
+                <li><span>The Goal:</span> Building systems that are reliable, scalable, and maintainable.</li>
+            </ul>
+        </div>
+
+        <div class="slide">
+            <h2>High-Level Design (HLD)</h2>
+            <ul>
+                <li><span>Scope:</span> The "Bird's Eye View" of the entire system.</li>
+                <li><span>Focus:</span> System architecture, databases, load balancers, caching layers, and inter-service communication.</li>
+                <li><span>Output:</span> Block diagrams, flowcharts, and defining tech stacks.</li>
+                <li><span>Target Audience:</span> Software Architects, Product Managers, and Stakeholders.</li>
+            </ul>
+        </div>
+
+        <div class="slide">
+            <h2>Low-Level Design (LLD)</h2>
+            <ul>
+                <li><span>Scope:</span> The microscopic view of individual components.</li>
+                <li><span>Focus:</span> Classes, interfaces, data structures, algorithms, and design patterns.</li>
+                <li><span>Output:</span> Class diagrams, entity-relationship diagrams (ERD), and exact API signatures.</li>
+                <li><span>Target Audience:</span> Developers and QA Engineers.</li>
+            </ul>
+        </div>
+
+        <div class="slide">
+            <h2>HLD vs LLD: Key Differences</h2>
+            <ul>
+                <li><span>Abstraction:</span> HLD is highly abstract; LLD is highly detailed.</li>
+                <li><span>Creation Phase:</span> HLD is created first (System Architecture); LLD is created next (Component Design).</li>
+                <li><span>Tools:</span> HLD uses System Context diagrams; LLD uses UML (Unified Modeling Language).</li>
+                <li><span>Interview Context:</span> HLD tests infrastructure knowledge; LLD tests Object-Oriented Programming (OOP) and SOLID principles.</li>
+            </ul>
+        </div>
+
+        <div class="slide">
+            <h2>Core Concepts: Scalability</h2>
+            <ul>
+                <li><span>Vertical Scaling (Scaling Up):</span> Adding more power (CPU, RAM) to an existing machine. Limited by hardware maximums.</li>
+                <li><span>Horizontal Scaling (Scaling Out):</span> Adding more machines to your pool of resources. Virtually infinite but adds complexity.</li>
+                <li><span>Industry Standard:</span> Modern distributed systems heavily rely on horizontal scaling.</li>
+            </ul>
+        </div>
+
+        <div class="slide">
+            <h2>Load Balancing</h2>
+            <ul>
+                <li><span>Purpose:</span> Distributes incoming network traffic across multiple servers to ensure no single server bears too much demand.</li>
+                <li><span>Algorithms:</span> Round Robin, Least Connections, IP Hash.</li>
+                <li><span>Benefits:</span> Increases reliability, availability, and capacity. Prevents single points of failure (SPOF).</li>
+            </ul>
+        </div>
+
+        <div class="slide">
+            <h2>Caching Strategies</h2>
+            <ul>
+                <li><span>What it is:</span> Temporary storage layer that stores a subset of data for ultra-fast retrieval.</li>
+                <li><span>Tools:</span> Redis, Memcached.</li>
+                <li><span>Strategies:</span> 
+                    <ul>
+                        <li>Cache Aside (Lazy Loading)</li>
+                        <li>Write-Through</li>
+                        <li>Write-Back</li>
+                    </ul>
+                </li>
+                <li><span>Eviction Policies:</span> LRU (Least Recently Used), LFU, FIFO.</li>
+            </ul>
+        </div>
+
+        <div class="slide">
+            <h2>Database Scaling</h2>
+            <ul>
+                <li><span>Replication:</span> Creating copies of the database (Master-Slave architecture). Master handles writes; Slaves handle reads.</li>
+                <li><span>Sharding:</span> Partitioning a database into smaller, faster, more easily managed parts called data shards.</li>
+                <li><span>Partitioning:</span> Splitting data horizontally (by rows) or vertically (by columns).</li>
+            </ul>
+        </div>
+
+        <div class="slide">
+            <h2>The CAP Theorem</h2>
+            <ul>
+                <li>In a distributed data store, you can only guarantee two out of three:</li>
+                <li><span>Consistency:</span> Every read receives the most recent write or an error.</li>
+                <li><span>Availability:</span> Every request receives a non-error response, without guaranteeing it contains the most recent write.</li>
+                <li><span>Partition Tolerance:</span> The system continues to operate despite an arbitrary number of messages being dropped by the network.</li>
+            </ul>
+        </div>
+
+        <div class="slide">
+            <h2>Microservices vs Monolith</h2>
+            <ul>
+                <li><span>Monolith:</span> Single unified unit. Easy to develop and deploy initially, but hard to scale and maintain as the codebase grows.</li>
+                <li><span>Microservices:</span> Suite of independently deployable, modular services. Highly scalable and fault-tolerant, but introduces network complexity and operational overhead.</li>
+            </ul>
+        </div>
+
+        <div class="slide">
+            <h2>Message Queues & Async Processing</h2>
+            <ul>
+                <li><span>Problem:</span> Synchronous tasks block the user experience (e.g., video rendering, email sending).</li>
+                <li><span>Solution:</span> Message Queues temporarily store tasks until a worker process can execute them.</li>
+                <li><span>Tools:</span> Apache Kafka, RabbitMQ, Amazon SQS.</li>
+                <li><span>Benefit:</span> Decouples services, provides backpressure management, and ensures guaranteed delivery.</li>
+            </ul>
+        </div>
+
+        <div class="slide">
+            <h2>Content Delivery Networks (CDN)</h2>
+            <ul>
+                <li><span>What it is:</span> A geographically distributed network of proxy servers and their data centers.</li>
+                <li><span>Purpose:</span> Serve static content (HTML, CSS, JS, Images, Video) to users from a server geographically closest to them.</li>
+                <li><span>Benefits:</span> Drastically reduces latency, decreases server load, and protects against DDoS attacks.</li>
+            </ul>
+        </div>
+
+        <div class="slide">
+            <h2>Advanced Concept: Rate Limiting</h2>
+            <ul>
+                <li><span>Purpose:</span> Controls the rate of traffic sent or received by a network. Prevents abuse and cascading failures.</li>
+                <li><span>Algorithms:</span>
+                    <ul>
+                        <li>Token Bucket</li>
+                        <li>Leaking Bucket</li>
+                        <li>Fixed Window Counter</li>
+                        <li>Sliding Window Log</li>
+                    </ul>
+                </li>
+            </ul>
+        </div>
+
+        <div class="slide">
+            <h2>Advanced Concept: Consistent Hashing</h2>
+            <ul>
+                <li><span>The Problem:</span> Standard hashing (`hash(key) % N`) breaks down when servers (N) are added or removed, requiring massive data reshuffling.</li>
+                <li><span>The Solution:</span> Maps data and servers to a virtual ring. When a server is added/removed, only `k/N` keys need to be remapped.</li>
+                <li><span>Use Cases:</span> Distributed caches, DynamoDB, Cassandra.</li>
+            </ul>
+        </div>
+
+        <div class="slide">
+            <h2>The Interview Framework (REHAD)</h2>
+            <ul>
+                <li><span>R</span>equirements: Clarify functional and non-functional requirements (Ask questions!).</li>
+                <li><span>E</span>stimation: Back-of-the-envelope math (Traffic, Storage, Bandwidth).</li>
+                <li><span>H</span>igh-Level Design: Draw the core components and data flow.</li>
+                <li><span>A</span>PI Design: Define the contract between client and server.</li>
+                <li><span>D</span>eep Dive: Scale the system, identify bottlenecks, add caches/sharding.</li>
+            </ul>
+        </div>
+
+        <div class="slide">
+            <h2>Non-Functional Requirements (NFRs)</h2>
+            <ul>
+                <li>Often overlooked but critical in interviews.</li>
+                <li><span>Latency:</span> How fast must the system respond?</li>
+                <li><span>Throughput:</span> How many requests per second (RPS) must it handle?</li>
+                <li><span>Consistency vs. Availability:</span> Which is prioritized based on the business use case?</li>
+            </ul>
+        </div>
+
+        <div class="slide">
+            <h2>Company-Wise: Meta (News Feed)</h2>
+            <ul>
+                <li><span>Core Challenge:</span> Extreme read-heavy system, rapid feed generation.</li>
+                <li><span>Architecture:</span> Push (Fanout-on-write) vs Pull (Fanout-on-read) models.</li>
+                <li><span>Solution:</span> Hybrid approach. Pre-compute feeds for active users (Push), compute on-demand for inactive users or celebrities with millions of followers (Pull).</li>
+            </ul>
+        </div>
+
+        <div class="slide">
+            <h2>Company-Wise: Amazon (Checkout System)</h2>
+            <ul>
+                <li><span>Core Challenge:</span> High consistency, zero data loss, distributed transactions.</li>
+                <li><span>Architecture:</span> Idempotent APIs (prevent double charging), Distributed Locking.</li>
+                <li><span>Database:</span> Relational databases (ACID properties) for financial transactions; NoSQL for shopping cart state.</li>
+            </ul>
+        </div>
+
+        <div class="slide">
+            <h2>Company-Wise: Netflix (Streaming)</h2>
+            <ul>
+                <li><span>Core Challenge:</span> Massive bandwidth, global low latency, heavy storage.</li>
+                <li><span>Architecture:</span> Open Connect (Netflix's custom global CDN).</li>
+                <li><span>Process:</span> Videos are split into chunks, transcoded into different resolutions/formats, and distributed globally to edge servers.</li>
+            </ul>
+        </div>
+
+        <div class="slide">
+            <h2>Company-Wise: Uber (Ride-Hailing)</h2>
+            <ul>
+                <li><span>Core Challenge:</span> Real-time geolocation tracking, fast matching algorithms.</li>
+                <li><span>Architecture:</span> WebSockets for real-time driver location updates.</li>
+                <li><span>Geospatial DB:</span> QuadTrees or Google S2 Geometry to partition the map and efficiently find nearest drivers.</li>
+            </ul>
+        </div>
+
+        <div class="slide">
+            <h2>Company-Wise: Google (Web Crawler)</h2>
+            <ul>
+                <li><span>Core Challenge:</span> Scale (billions of pages), politeness (not DDoSing servers), handling duplicate content.</li>
+                <li><span>Architecture:</span> Seed URLs -> URL Frontier (Queue) -> DNS Resolver -> HTML Fetcher -> Content Extractor -> Storage.</li>
+                <li><span>Key Algorithms:</span> Bloom Filters (to track visited URLs and save memory).</li>
+            </ul>
+        </div>
+
+        <div class="slide">
+            <h2>Industry Readiness: The Resume</h2>
+            <ul>
+                <li><span>Impact over Duties:</span> Use the X-Y-Z formula: "Accomplished [X] as measured by [Y], by doing [Z]."</li>
+                <li><span>Metrics Matter:</span> "Reduced latency by 40%" instead of "Made API faster."</li>
+                <li><span>Portfolio:</span> GitHub is your modern resume. Open-source contributions and end-to-end deployed projects stand out.</li>
+            </ul>
+        </div>
+
+        <div class="slide">
+            <h2>Behavioral Interviews: STAR Method</h2>
+            <ul>
+                <li>Companies look for cultural fit and conflict resolution skills.</li>
+                <li><span>S</span>ituation: Set the scene and give necessary context.</li>
+                <li><span>T</span>ask: Describe your specific responsibility.</li>
+                <li><span>A</span>ction: Explain exactly what steps *you* took.</li>
+                <li><span>R</span>esult: Share the outcomes, heavily utilizing data and metrics.</li>
+            </ul>
+        </div>
+
+        <div class="slide">
+            <h2>DSA vs System Design</h2>
+            <ul>
+                <li><span>Data Structures & Algorithms:</span> Tests your localized logic, code optimization, and ability to translate thought into syntax.</li>
+                <li><span>System Design:</span> Tests your macro-level thinking, experience with real-world infrastructure, and trade-off analysis.</li>
+                <li><span>The Balance:</span> Junior roles focus 80% on DSA. Senior roles focus heavily on System Design and Architecture.</li>
+            </ul>
+        </div>
+
+        <div class="slide">
+            <h2>Navigating Ambiguity</h2>
+            <ul>
+                <li>Interviews are deliberately vague. "Design Twitter" is not a complete prompt.</li>
+                <li>Your first 5-10 minutes should strictly be scoping the problem.</li>
+                <li>Write down the exact features you are building, and explicitly state what you are *excluding* from the scope.</li>
+            </ul>
+        </div>
+
+        <div class="slide">
+            <h2>The Power of Mock Interviews</h2>
+            <ul>
+                <li>System Design is a conversational interview. You cannot practice it silently on a whiteboard.</li>
+                <li><span>Think Out Loud:</span> The interviewer is evaluating your thought process, not just the final architecture diagram.</li>
+                <li>Use platforms like Pramp, Exponent, or peer groups to practice vocalizing trade-offs.</li>
+            </ul>
+        </div>
+
+        <div class="slide">
+            <h2>Red Flags in Interviews</h2>
+            <ul>
+                <li><span>Buzzword Dropping:</span> Using terms like "Kafka" or "Microservices" without knowing how they work.</li>
+                <li><span>One-Size-Fits-All:</span> Suggesting NoSQL for every problem just because it scales easily.</li>
+                <li><span>Ignoring the Interviewer:</span> Not picking up on hints or rejecting constraints provided by the interviewer.</li>
+            </ul>
+        </div>
+
+        <div class="slide title-slide">
+            <h1>Thank You</h1>
+            <h2>Q&A Session</h2>
+            <p class="subtitle">Keep Building. Keep Scaling.</p>
+        </div>
+
+        <div class="controls">
+            <div class="counter" id="counter">1 / 30</div>
+            <button id="prev" title="Previous Slide">&#8592;</button>
+            <button id="next" title="Next Slide">&#8594;</button>
+        </div>
+        
+        <div class="progress-bar" id="progressBar"></div>
+
+    </div>
+
+    <script>
+        const slides = document.querySelectorAll('.slide');
+        const prevBtn = document.getElementById('prev');
+        const nextBtn = document.getElementById('next');
+        const counter = document.getElementById('counter');
+        const progressBar = document.getElementById('progressBar');
+        
+        let currentSlide = 0;
+        const totalSlides = slides.length;
+
+        function updateDeck() {
+            // Update slides visibility
+            slides.forEach((slide, index) => {
+                if (index === currentSlide) {
+                    slide.classList.add('active');
+                } else {
+                    slide.classList.remove('active');
+                }
+            });
+
+            // Update buttons
+            prevBtn.disabled = currentSlide === 0;
+            nextBtn.disabled = currentSlide === totalSlides - 1;
+
+            // Update counter
+            counter.innerText = `${currentSlide + 1} / ${totalSlides}`;
+
+            // Update progress bar
+            const progressPercentage = ((currentSlide + 1) / totalSlides) * 100;
+            progressBar.style.width = `${progressPercentage}%`;
+        }
+
+        // Click Events
+        prevBtn.addEventListener('click', () => {
+            if (currentSlide > 0) {
+                currentSlide--;
+                updateDeck();
+            }
+        });
+
+        nextBtn.addEventListener('click', () => {
+            if (currentSlide < totalSlides - 1) {
+                currentSlide++;
+                updateDeck();
+            }
+        });
+
+        // Keyboard Navigation
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowRight' || e.key === ' ') {
+                if (currentSlide < totalSlides - 1) {
+                    currentSlide++;
+                    updateDeck();
+                }
+            } else if (e.key === 'ArrowLeft') {
+                if (currentSlide > 0) {
+                    currentSlide--;
+                    updateDeck();
+                }
+            }
+        });
+
+        // Initialize
+        updateDeck();
+    </script>
+</body>
+</html>
