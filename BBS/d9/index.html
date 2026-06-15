@@ -1,0 +1,616 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Day 9: Tabular Data Mastery with Pandas</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
+
+        :root {
+            --bg-deep: #020617;
+            --emerald-dark: #064e3b;
+            --emerald-base: #10b981;
+            --emerald-light: #34d399;
+            --glass-bg: rgba(15, 23, 42, 0.65);
+            --glass-border: rgba(52, 211, 153, 0.25);
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --code-bg: #0f172a;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Inter', sans-serif;
+            background: radial-gradient(circle at top right, var(--emerald-dark), var(--bg-deep) 60%);
+            color: var(--text-main);
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+        }
+
+        /* Ambient Glow Elements */
+        .glow-sphere-1 {
+            position: absolute;
+            top: -10%;
+            left: -10%;
+            width: 50vw;
+            height: 50vw;
+            background: radial-gradient(circle, rgba(16, 185, 129, 0.15) 0%, transparent 70%);
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .glow-sphere-2 {
+            position: absolute;
+            bottom: -20%;
+            right: -10%;
+            width: 60vw;
+            height: 60vw;
+            background: radial-gradient(circle, rgba(6, 78, 59, 0.4) 0%, transparent 70%);
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        /* Main Glass Container */
+        #deck-container {
+            width: 90vw;
+            max-width: 1440px;
+            height: 85vh;
+            background: var(--glass-bg);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border);
+            border-radius: 24px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+            position: relative;
+            z-index: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        /* Top Progress Bar */
+        #progress-track {
+            width: 100%;
+            height: 5px;
+            background: rgba(255, 255, 255, 0.05);
+            position: absolute;
+            top: 0;
+            left: 0;
+            z-index: 10;
+        }
+
+        #progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--emerald-base), var(--emerald-light));
+            width: 0%;
+            transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 0 15px var(--emerald-base);
+        }
+
+        /* Slide Viewport */
+        #viewport {
+            flex-grow: 1;
+            padding: 50px 80px;
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+
+        .slide {
+            position: absolute;
+            top: 50px;
+            bottom: 50px;
+            left: 80px;
+            right: 80px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            opacity: 0;
+            transform: translateX(30px);
+            transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+            visibility: hidden;
+        }
+
+        .slide.active {
+            opacity: 1;
+            transform: translateX(0);
+            visibility: visible;
+        }
+
+        /* Typography */
+        h1 {
+            font-size: 4rem;
+            font-weight: 800;
+            margin-bottom: 20px;
+            letter-spacing: -1.5px;
+            line-height: 1.1;
+            background: linear-gradient(135deg, #ffffff 0%, var(--emerald-light) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        h2 {
+            font-size: 2.8rem;
+            font-weight: 700;
+            color: var(--emerald-base);
+            margin-bottom: 30px;
+            letter-spacing: -0.5px;
+        }
+
+        p, li {
+            font-size: 1.5rem;
+            line-height: 1.8;
+            color: var(--text-muted);
+            margin-bottom: 20px;
+        }
+
+        ul, ol {
+            margin-left: 30px;
+            padding-left: 10px;
+        }
+
+        li { margin-bottom: 15px; }
+
+        .highlight {
+            color: #ffffff;
+            font-weight: 500;
+            border-bottom: 2px solid var(--emerald-base);
+            padding-bottom: 2px;
+        }
+
+        .tag {
+            display: inline-block;
+            background: rgba(16, 185, 129, 0.15);
+            color: var(--emerald-light);
+            padding: 4px 12px;
+            border-radius: 6px;
+            font-size: 1.2rem;
+            font-weight: 600;
+            border: 1px solid rgba(16, 185, 129, 0.3);
+            margin-bottom: 20px;
+        }
+
+        /* Mac-Style Code Block */
+        .terminal {
+            background: var(--code-bg);
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            overflow: hidden;
+            margin-top: 20px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.5);
+            width: 100%;
+            max-width: 1000px;
+        }
+
+        .terminal-header {
+            background: #1e293b;
+            padding: 12px 20px;
+            display: flex;
+            gap: 8px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .dot { width: 12px; height: 12px; border-radius: 50%; }
+        .dot-red { background: #ef4444; }
+        .dot-yellow { background: #eab308; }
+        .dot-green { background: #22c55e; }
+
+        pre {
+            margin: 0;
+            padding: 25px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 1.25rem;
+            color: #e2e8f0;
+            overflow-x: auto;
+            line-height: 1.6;
+        }
+
+        /* Syntax Highlighting */
+        .cm { color: #64748b; font-style: italic; } /* Comment */
+        .kw { color: #c678dd; } /* Keyword */
+        .st { color: #34d399; } /* String */
+        .fn { color: #61afef; } /* Function */
+        .nm { color: #d19a66; } /* Number */
+        .op { color: #56b6c2; } /* Operator */
+
+        /* Navigation Footer */
+        #footer {
+            padding: 25px 50px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-top: 1px solid var(--glass-border);
+            background: rgba(0, 0, 0, 0.2);
+            z-index: 10;
+        }
+
+        .nav-btn {
+            background: rgba(16, 185, 129, 0.1);
+            border: 1px solid var(--emerald-base);
+            color: var(--emerald-light);
+            padding: 12px 30px;
+            font-size: 1.2rem;
+            font-weight: 600;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-family: 'Inter', sans-serif;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .nav-btn:hover:not(:disabled) {
+            background: var(--emerald-base);
+            color: #020617;
+            box-shadow: 0 0 20px rgba(16, 185, 129, 0.4);
+        }
+
+        .nav-btn:disabled {
+            border-color: rgba(255, 255, 255, 0.1);
+            color: rgba(255, 255, 255, 0.2);
+            background: transparent;
+            cursor: not-allowed;
+            box-shadow: none;
+        }
+
+        #counter {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 1.2rem;
+            color: var(--emerald-base);
+            font-weight: 500;
+            letter-spacing: 3px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="glow-sphere-1"></div>
+    <div class="glow-sphere-2"></div>
+
+    <div id="deck-container">
+        <div id="progress-track"><div id="progress-fill"></div></div>
+
+        <div id="viewport">
+            </div>
+        
+        <div id="footer">
+            <button id="btn-prev" class="nav-btn" onclick="navigate(-1)">&#8592; Prev</button>
+            <div id="counter">01 / 30</div>
+            <button id="btn-next" class="nav-btn" onclick="navigate(1)">Next &#8594;</button>
+        </div>
+    </div>
+
+    <script>
+        const slideData = [
+            `
+            <span class="tag">Part III: Module 9.1</span>
+            <h1>Tabular Data Mastery via Pandas</h1>
+            <h2>Day 9: Series, DataFrames & Boolean Masking</h2>
+            <p>Stepping into high-velocity structured data manipulation. Understanding the architectural division between Series and DataFrames, mastering index matching, and implementing conditional feature filters.</p>
+            `,
+            `
+            <h2>Day 9 Objectives</h2>
+            <ul>
+                <li>Deconstruct the <span class="highlight">Pandas Architecture</span> and its NumPy foundation.</li>
+                <li>Differentiate structurally between 1D Series and 2D DataFrames.</li>
+                <li>Master index alignment and explicit data mapping.</li>
+                <li>Implement precise coordinate isolation via <code>.loc[]</code> and <code>.iloc[]</code>.</li>
+                <li>Engineer memory-efficient data filtering pipelines using <strong>Boolean Masking</strong>.</li>
+            </ul>
+            `,
+            `
+            <h2>Beyond Raw Arrays</h2>
+            <p>Yesterday, we mastered NumPy's contiguous numerical blocks. While exceptionally fast, ndarrays carry a severe real-world restriction:</p>
+            <p><span class="highlight">They are strictly homogeneous.</span></p>
+            <p>Industrial datasets are fundamentally mixed (heterogeneous). A typical transactional dataset contains integers (User IDs), strings (Product Names), floats (Prices), and booleans (Churn Status) aligned side-by-side.</p>
+            `,
+            `
+            <h2>The Need for Pandas</h2>
+            <p>To bridge the gap between raw mathematical matrices and relational data tables, we rely on <strong>Pandas</strong> (derived from *Panel Data*).</p>
+            <p>Pandas introduces relational tabular mechanics—similar to SQL tables or Excel sheets—directly into the Python runtime, managing diverse data types smoothly while maintaining underlying NumPy execution speeds.</p>
+            `,
+            `
+            <h2>The Relational Blueprint</h2>
+            <p>Pandas optimizes operations by building upon two core layout paradigms:</p>
+            <ol>
+                <li><strong>The Series:</strong> A one-dimensional, labeled array wrapper.</li>
+                <li><strong>The DataFrame:</strong> A two-dimensional spreadsheet grid mapping row entries to discrete columns.</li>
+            </ol>
+            `,
+            `
+            <h2>Importing the Environment</h2>
+            <p>By global industrial convention, the Pandas core is loaded using the clean namespace handle <code>pd</code>.</p>
+            <div class="terminal">
+                <div class="terminal-header"><div class="dot dot-red"></div><div class="dot dot-yellow"></div><div class="dot dot-green"></div></div>
+                <pre><span class="kw">import</span> pandas <span class="kw">as</span> pd
+<span class="kw">import</span> numpy <span class="kw">as</span> np
+
+<span class="cm"># Verification check</span>
+<span class="fn">print</span>(pd.__version__)</pre>
+            </div>
+            `,
+            `
+            <span class="tag">Module 9.2</span>
+            <h2>The Pandas Series Architecture</h2>
+            <p>A <strong>Series</strong> represents a single continuous column of metrics. While structurally similar to a 1D NumPy array, it adds a crucial feature: <span class="highlight">Explicit Labeled Indexing</span>.</p>
+            <p>Instead of tracking data points strictly through zero-based coordinates (0, 1, 2), every entry inside a Series can be tied directly to a custom descriptive key string.</p>
+            `,
+            `
+            <h2>Instantiating a Series</h2>
+            <div class="terminal">
+                <div class="terminal-header"><div class="dot dot-red"></div><div class="dot dot-yellow"></div><div class="dot dot-green"></div></div>
+                <pre>raw_metrics <span class="op">=</span> [<span class="nm">0.92</span>, <span class="nm">0.88</span>, <span class="nm">0.95</span>]
+row_labels <span class="op">=</span> [<span class="st">"Epoch_1"</span>, <span class="st">"Epoch_2"</span>, <span class="st">"Epoch_3"</span>]
+
+<span class="cm"># Binding metrics to explicit label pointers</span>
+history <span class="op">=</span> pd.Series(data<span class="op">=</span>raw_metrics, index<span class="op">=</span>row_labels)
+<span class="fn">print</span>(history)</pre>
+            </div>
+            `,
+            `
+            <h2>Automatic Associative Mapping</h2>
+            <p>If you pass a standard Python dictionary directly into the Series constructor, Pandas automatically extracts the dictionary's keys to establish the explicit index, maintaining precise relational tracking.</p>
+            <div class="terminal">
+                <div class="terminal-header"><div class="dot dot-red"></div><div class="dot dot-yellow"></div><div class="dot dot-green"></div></div>
+                <pre>cfg <span class="op">=</span> {<span class="st">"LR"</span>: <span class="nm">0.001</span>, <span class="st">"Batch"</span>: <span class="nm">64</span>}
+
+s_config <span class="op">=</span> pd.Series(cfg)
+<span class="fn">print</span>(s_config[<span class="st">"LR"</span>]) <span class="cm"># Accesses 0.001 instantly via label</span></pre>
+            </div>
+            `,
+            `
+            <span class="tag">Module 9.3</span>
+            <h2>The Pandas DataFrame Engine</h2>
+            <p>A <strong>DataFrame</strong> represents the master grid. It is an ordered collection of individual Series sharing a single unified row index layout.</p>
+            <p>DataFrames form the core working environment where you will clean features, evaluate targets, and train predictive models.</p>
+            `,
+            `
+            <h2>DataFrame Instantiation</h2>
+            <p>The most common manual generation technique uses associative dictionary matrices, where keys define the structural column headings.</p>
+            <div class="terminal">
+                <div class="terminal-header"><div class="dot dot-red"></div><div class="dot dot-yellow"></div><div class="dot dot-green"></div></div>
+                <pre>raw_data <span class="op">=</span> {
+    <span class="st">"Age"</span>: [<span class="nm">24</span>, <span class="nm">31</span>, <span class="nm">45</span>],
+    <span class="st">"Purchased"</span>: [<span class="kw">False</span>, <span class="kw">True</span>, <span class="kw">True</span>]
+}
+
+df <span class="op">=</span> pd.DataFrame(raw_data)
+<span class="cm"># Columns are mapped instantly to structural Series features</span></pre>
+            </div>
+            `,
+            `
+            <h2>Structural Auditing Methods</h2>
+            <p>Before modifying features, data engineers execute quick diagnostic calls to evaluate structural metadata configurations:</p>
+            <ul>
+                <li><code>df.shape</code>: Returns a coordinate tuple tracking (Rows, Columns).</li>
+                <li><code>df.columns</code>: Returns an array tracking column identifiers.</li>
+                <li><code>df.info()</code>: Displays memory usage footprints and maps non-null counts.</li>
+            </ul>
+            `,
+            `
+            <h2>High-Level Content Extraction</h2>
+            <div class="terminal">
+                <div class="terminal-header"><div class="dot dot-red"></div><div class="dot dot-yellow"></div><div class="dot dot-green"></div></div>
+                <pre><span class="cm"># Extract top 5 rows cleanly for immediate layout validation</span>
+<span class="fn">print</span>(df.head())
+
+<span class="cm"># Extract trailing 3 rows</span>
+<span class="fn">print</span>(df.tail(<span class="nm">3</span>))
+
+<span class="cm"># Generate explicit statistical distributions (Mean, StDev, Quartiles)</span>
+<span class="fn">print</span>(df.describe())</pre>
+            </div>
+            `,
+            `
+            <span class="tag">Module 9.4</span>
+            <h2>Data Selection Foundations</h2>
+            <p>Extracting target parameters requires passing key identifiers inside standard bracket configurations (<code>df["Column_Name"]</code>).</p>
+            <p>Passing a single string identifier pulls out that column as an isolated **Series** object.</p>
+            `,
+            `
+            <h2>Multi-Feature Slicing</h2>
+            <p>To extract multiple feature columns simultaneously, pass an inner list containing the column names. This operation outputs a restructured, distinct **DataFrame**.</p>
+            <div class="terminal">
+                <div class="terminal-header"><div class="dot dot-red"></div><div class="dot dot-yellow"></div><div class="dot dot-green"></div></div>
+                <pre><span class="cm"># Double bracket pattern maps an internal sequence list</span>
+sub_features <span class="op">=</span> df[[<span class="st">"Age"</span>, <span class="st">"Purchased"</span>]]
+<span class="fn">print</span>(<span class="fn">type</span>(sub_features)) <span class="cm"># Output: &lt;class 'pandas.core.frame.DataFrame'&gt;</span></pre>
+            </div>
+            `,
+            `
+            <h2>Explicit Attribute Selectors</h2>
+            <p>Standard bracket notation (<code>df[]</code>) changes its behavior depending on whether you pass strings or slices, which can introduce ambiguity into production pipelines.</p>
+            <p>To enforce absolute, bug-free data tracking, professionals isolate data points using explicit coordinate selectors: <span class="highlight">.loc[]</span> and <span class="highlight">.iloc[]</span>.</p>
+            `,
+            `
+            <h2>Label-Based Selection: .loc[]</h2>
+            <p>The <code>.loc[]</code> operator targets data rows and columns based strictly on their <span class="highlight">Explicit Text Labels</span>.</p>
+            <p>The operator follows a clear, multi-axis coordinate syntax layout: <code>df.loc[row_label, column_label]</code></p>
+            `,
+            `
+            <h2>Executing Row Queries via .loc[]</h2>
+            <div class="terminal">
+                <div class="terminal-header"><div class="dot dot-red"></div><div class="dot dot-yellow"></div><div class="dot dot-green"></div></div>
+                <pre>df <span class="op">=</span> pd.DataFrame(
+    data<span class="op">=</span>{<span class="st">"Salary"</span>: [<span class="nm">50k</span>, <span class="nm">85k</span>]}, 
+    index<span class="op">=</span>[<span class="st">"UID_101"</span>, <span class="st">"UID_102"</span>]
+)
+
+<span class="cm"># Extract all column data tied strictly to specific user identifier</span>
+user_profile <span class="op">=</span> df.loc[<span class="st">"UID_101"</span>]</pre>
+            </div>
+            `,
+            `
+            <h2>Multi-Axis Selection via .loc[]</h2>
+            <p>You can combine label targets with array-style list selections to pinpoint sub-matrices precisely.</p>
+            <div class="terminal">
+                <div class="terminal-header"><div class="dot dot-red"></div><div class="dot dot-yellow"></div><div class="dot dot-green"></div></div>
+                <pre><span class="cm"># Extracting explicit grid points safely</span>
+slice_data <span class="op">=</span> df.loc[[<span class="st">"UID_101"</span>, <span class="st">"UID_102"</span>], [<span class="st">"Salary"</span>]]</pre>
+            </div>
+            `,
+            `
+            <h2>Integer-Position Selection: .iloc[]</h2>
+            <p>If you don't know the text labels of a dataset but know its coordinate dimensions, utilize the <code>.iloc[]</code> selector.</p>
+            <p>The <code>.iloc[]</code> operator ignores all custom textual indices, evaluating data locations using standard, <span class="highlight">zero-based integer positions</span>.</p>
+            `,
+            `
+            <h2>Executing Position Queries via .iloc[]</h2>
+            <div class="terminal">
+                <div class="terminal-header"><div class="dot dot-red"></div><div class="dot dot-yellow"></div><div class="dot dot-green"></div></div>
+                <pre><span class="cm"># Extract the first row entry (index 0), absolute first column (index 0)</span>
+origin_point <span class="op">=</span> df.iloc[<span class="nm">0</span>, <span class="nm">0</span>]
+
+<span class="cm"># Slicing blocks: Extract first 2 rows across indices 1 up to 3 columns</span>
+sub_grid <span class="op">=</span> df.iloc[<span class="nm">0</span>:<span class="nm">2</span>, <span class="nm">1</span>:<span class="nm">3</span>]</pre>
+            </div>
+            `,
+            `
+            <h2>The Inclusive Slicing Trap</h2>
+            <p>Be aware of a critical indexing difference that frequently causes off-by-one errors in data pipelines:</p>
+            <ul>
+                <li><code>.iloc[]</code> tracking matches standard Python slicing: the stop coordinate is strictly <span class="highlight">exclusive</span>.</li>
+                <li><code>.loc[]</code> tracking matches explicit labels: the stop index label is completely <span class="highlight">inclusive</span>.</li>
+            </ul>
+            `,
+            `
+            <span class="tag">Module 9.5</span>
+            <h2>Conditional Filtering Foundations</h2>
+            <p>Isolating specific entries (e.g., users who have canceled their accounts or transactions greater than $500) is the cornerstone of analytical query handling.</p>
+            <p>We implement this process efficiently using <span class="highlight">Boolean Masking</span>.</p>
+            `,
+            `
+            <h2>Vectorized Logical Broadcasts</h2>
+            <p>When you apply a relational comparison operator to a DataFrame column, Pandas doesn't return a filtered dataset immediately. Instead, it runs a vectorized broadcast down the column.</p>
+            <p>This comparison outputs an aligned **Series of Boolean True/False values** matching the original axis length.</p>
+            `,
+            `
+            <h2>Observing the Logical Mask</h2>
+            <div class="terminal">
+                <div class="terminal-header"><div class="dot dot-red"></div><div class="dot dot-yellow"></div><div class="dot dot-green"></div></div>
+                <pre>df <span class="op">=</span> pd.DataFrame({<span class="st">"Score"</span>: [<span class="nm">45</span>, <span class="nm">92</span>, <span class="nm">78</span>]})
+
+<span class="cm"># Generating the boolean truth mask</span>
+mask <span class="op">=</span> df[<span class="st">"Score"</span>] <span class="op">>=</span> <span class="nm">70</span>
+<span class="fn">print</span>(mask)
+<span class="cm"># Output: 0 False | 1 True | 2 True</span></pre>
+            </div>
+            `,
+            `
+            <h2>Applying the Mask</h2>
+            <p>To filter your data, pass the generated boolean Series back into the DataFrame's selection selector. Pandas filters out all rows aligned with a <code>False</code> value, keeping only the <code>True</code> entries.</p>
+            <div class="terminal">
+                <div class="terminal-header"><div class="dot dot-red"></div><div class="dot dot-yellow"></div><div class="dot dot-green"></div></div>
+                <pre><span class="cm"># Passing the filter mask directly into explicit selection controls</span>
+passing_students <span class="op">=</span> df.loc[df[<span class="st">"Score"</span>] <span class="op">>=</span> <span class="nm">70</span>]
+<span class="fn">print</span>(passing_students)</pre>
+            </div>
+            `,
+            `
+            <h2>Multi-Conditional Masking: AND (&amp;)</h2>
+            <p>To combine multiple filtering constraints, you cannot use Python's standard logical <code>and</code> or <code>or</code> operators, because they are designed to evaluate single truth values, not entire arrays.</p>
+            <p>Instead, Pandas relies on bitwise logical operators, using the <span class="highlight">&amp;</span> symbol to enforce an element-by-element **AND** check.</p>
+            `,
+            `
+            <h2>The Parentheses Syntax Mandate</h2>
+            <p>Because bitwise operators carry higher evaluation precedence than comparison operators, <span class="highlight">you must enclose each individual condition inside parentheses</span> to prevent syntax errors.</p>
+            <div class="terminal">
+                <div class="terminal-header"><div class="dot dot-red"></div><div class="dot dot-yellow"></div><div class="dot dot-green"></div></div>
+                <pre><span class="cm"># Extracting entries meeting BOTH operational metrics cleanly</span>
+target_group <span class="op">=</span> df.loc[(df[<span class="st">"Age"</span>] <span class="op">></span> <span class="nm">30</span>) <span class="op">&</span> (df[<span class="st">"Purchased"</span>] <span class="op">==</span> <span class="kw">True</span>)]</pre>
+            </div>
+            `,
+            `
+            <h2>Multi-Conditional Masking: OR (|)</h2>
+            <p>To implement an **OR** check (retaining records that meet *at least one* of your conditions), use the bitwise pipe operator (<span class="highlight">|</span>).</p>
+            <div class="terminal">
+                <div class="terminal-header"><div class="dot dot-red"></div><div class="dot dot-yellow"></div><div class="dot dot-green"></div></div>
+                <pre><span class="cm"># Isolate extreme data points using bitwise OR controls</span>
+anomalies <span class="op">=</span> df.loc[(df[<span class="st">"Metrics"</span>] <span class="op">></span> <span class="nm">100</span>) <span class="op">|</span> (df[<span class="st">"Metrics"</span>] <span class="op"><</span> <span class="nm">0</span>)]</pre>
+            </div>
+            `,
+            `
+            <h2>Day 9 Summary</h2>
+            <ul>
+                <li><strong>Architecture:</strong> Pandas leverages 1D Series and 2D DataFrames to manage mixed (heterogeneous) data tables efficiently on top of NumPy.</li>
+                <li><strong>Coordinates:</strong> Enforce explicit, predictable data tracking by using <code>.loc[]</code> for text labels and <code>.iloc[]</code> for integer positions.</li>
+                <li><strong>Filtering:</strong> Boolean masking combines vectorized comparisons with bitwise operators (<code>&</code>, <code>|</code>) to extract specific records safely.</li>
+            </ul>
+            `,
+            `
+            <h2>Next Steps & Lab Setup</h2>
+            <p><span class="highlight">Practical Deliverables:</span></p>
+            <ol>
+                <li>Construct a 5-row user DataFrame containing Ages and account balances.</li>
+                <li>Isolate the row and column coordinates of index position 2 using the <code>.iloc[]</code> selector.</li>
+                <li>Apply a multi-conditional boolean mask to filter out users aged over 25 who also maintain a positive account balance.</li>
+            </ol>
+            <p><em>Prepare for Day 10: Handling Missing Values and Data Auditing.</em></p>
+            `
+        ];
+
+        let currentIndex = 0;
+        const viewport = document.getElementById('viewport');
+        const progressFill = document.getElementById('progress-fill');
+        const counter = document.getElementById('counter');
+        const btnPrev = document.getElementById('btn-prev');
+        const btnNext = document.getElementById('btn-next');
+
+        function initDeck() {
+            slideData.forEach((htmlContent, index) => {
+                const slideDiv = document.createElement('div');
+                slideDiv.className = 'slide';
+                slideDiv.id = 'slide-' + index;
+                slideDiv.innerHTML = htmlContent;
+                viewport.appendChild(slideDiv);
+            });
+            updateState();
+        }
+
+        function navigate(step) {
+            const nextIndex = currentIndex + step;
+            if (nextIndex >= 0 && nextIndex < slideData.length) {
+                currentIndex = nextIndex;
+                updateState();
+            }
+        }
+
+        function updateState() {
+            const slides = document.querySelectorAll('.slide');
+            slides.forEach((slide, index) => {
+                if (index === currentIndex) {
+                    slide.classList.add('active');
+                    slide.style.transform = 'translateX(0)';
+                } else if (index < currentIndex) {
+                    slide.classList.remove('active');
+                    slide.style.transform = 'translateX(-50px)';
+                } else {
+                    slide.classList.remove('active');
+                    slide.style.transform = 'translateX(50px)';
+                }
+            });
+
+            const percent = ((currentIndex + 1) / slideData.length) * 100;
+            progressFill.style.width = percent + '%';
+
+            const formattedCurrent = (currentIndex + 1).toString().padStart(2, '0');
+            counter.innerText = formattedCurrent + ' / ' + slideData.length;
+
+            btnPrev.disabled = currentIndex === 0;
+            btnNext.disabled = currentIndex === slideData.length - 1;
+        }
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowRight' || e.key === ' ') navigate(1);
+            if (e.key === 'ArrowLeft') navigate(-1);
+        });
+
+        initDeck();
+    </script>
+</body>
+</html>
