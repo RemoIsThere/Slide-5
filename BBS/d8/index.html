@@ -1,0 +1,601 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Day 8: Numerical Computation with NumPy</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
+
+        :root {
+            --bg-deep: #020617;
+            --emerald-dark: #064e3b;
+            --emerald-base: #10b981;
+            --emerald-light: #34d399;
+            --glass-bg: rgba(15, 23, 42, 0.65);
+            --glass-border: rgba(52, 211, 153, 0.25);
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --code-bg: #0f172a;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Inter', sans-serif;
+            background: radial-gradient(circle at top right, var(--emerald-dark), var(--bg-deep) 60%);
+            color: var(--text-main);
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+        }
+
+        /* Ambient Glow Elements */
+        .glow-sphere-1 {
+            position: absolute;
+            top: -10%;
+            left: -10%;
+            width: 50vw;
+            height: 50vw;
+            background: radial-gradient(circle, rgba(16, 185, 129, 0.15) 0%, transparent 70%);
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .glow-sphere-2 {
+            position: absolute;
+            bottom: -20%;
+            right: -10%;
+            width: 60vw;
+            height: 60vw;
+            background: radial-gradient(circle, rgba(6, 78, 59, 0.4) 0%, transparent 70%);
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        /* Main Glass Container */
+        #deck-container {
+            width: 90vw;
+            max-width: 1440px;
+            height: 85vh;
+            background: var(--glass-bg);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border);
+            border-radius: 24px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+            position: relative;
+            z-index: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        /* Top Progress Bar */
+        #progress-track {
+            width: 100%;
+            height: 5px;
+            background: rgba(255, 255, 255, 0.05);
+            position: absolute;
+            top: 0;
+            left: 0;
+            z-index: 10;
+        }
+
+        #progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--emerald-base), var(--emerald-light));
+            width: 0%;
+            transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 0 15px var(--emerald-base);
+        }
+
+        /* Slide Viewport */
+        #viewport {
+            flex-grow: 1;
+            padding: 50px 80px;
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+
+        .slide {
+            position: absolute;
+            top: 50px;
+            bottom: 50px;
+            left: 80px;
+            right: 80px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            opacity: 0;
+            transform: translateX(30px);
+            transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+            visibility: hidden;
+        }
+
+        .slide.active {
+            opacity: 1;
+            transform: translateX(0);
+            visibility: visible;
+        }
+
+        /* Typography */
+        h1 {
+            font-size: 4rem;
+            font-weight: 800;
+            margin-bottom: 20px;
+            letter-spacing: -1.5px;
+            line-height: 1.1;
+            background: linear-gradient(135deg, #ffffff 0%, var(--emerald-light) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        h2 {
+            font-size: 2.8rem;
+            font-weight: 700;
+            color: var(--emerald-base);
+            margin-bottom: 30px;
+            letter-spacing: -0.5px;
+        }
+
+        p, li {
+            font-size: 1.5rem;
+            line-height: 1.8;
+            color: var(--text-muted);
+            margin-bottom: 20px;
+        }
+
+        ul, ol {
+            margin-left: 30px;
+            padding-left: 10px;
+        }
+
+        li { margin-bottom: 15px; }
+
+        .highlight {
+            color: #ffffff;
+            font-weight: 500;
+            border-bottom: 2px solid var(--emerald-base);
+            padding-bottom: 2px;
+        }
+
+        .tag {
+            display: inline-block;
+            background: rgba(16, 185, 129, 0.15);
+            color: var(--emerald-light);
+            padding: 4px 12px;
+            border-radius: 6px;
+            font-size: 1.2rem;
+            font-weight: 600;
+            border: 1px solid rgba(16, 185, 129, 0.3);
+            margin-bottom: 20px;
+        }
+
+        /* Mac-Style Code Block */
+        .terminal {
+            background: var(--code-bg);
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            overflow: hidden;
+            margin-top: 20px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.5);
+            width: 100%;
+            max-width: 1000px;
+        }
+
+        .terminal-header {
+            background: #1e293b;
+            padding: 12px 20px;
+            display: flex;
+            gap: 8px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .dot { width: 12px; height: 12px; border-radius: 50%; }
+        .dot-red { background: #ef4444; }
+        .dot-yellow { background: #eab308; }
+        .dot-green { background: #22c55e; }
+
+        pre {
+            margin: 0;
+            padding: 25px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 1.25rem;
+            color: #e2e8f0;
+            overflow-x: auto;
+            line-height: 1.6;
+        }
+
+        /* Syntax Highlighting */
+        .cm { color: #64748b; font-style: italic; } /* Comment */
+        .kw { color: #c678dd; } /* Keyword */
+        .st { color: #34d399; } /* String */
+        .fn { color: #61afef; } /* Function */
+        .nm { color: #d19a66; } /* Number */
+        .op { color: #56b6c2; } /* Operator */
+
+        /* Navigation Footer */
+        #footer {
+            padding: 25px 50px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-top: 1px solid var(--glass-border);
+            background: rgba(0, 0, 0, 0.2);
+            z-index: 10;
+        }
+
+        .nav-btn {
+            background: rgba(16, 185, 129, 0.1);
+            border: 1px solid var(--emerald-base);
+            color: var(--emerald-light);
+            padding: 12px 30px;
+            font-size: 1.2rem;
+            font-weight: 600;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-family: 'Inter', sans-serif;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .nav-btn:hover:not(:disabled) {
+            background: var(--emerald-base);
+            color: #020617;
+            box-shadow: 0 0 20px rgba(16, 185, 129, 0.4);
+        }
+
+        .nav-btn:disabled {
+            border-color: rgba(255, 255, 255, 0.1);
+            color: rgba(255, 255, 255, 0.2);
+            background: transparent;
+            cursor: not-allowed;
+            box-shadow: none;
+        }
+
+        #counter {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 1.2rem;
+            color: var(--emerald-base);
+            font-weight: 500;
+            letter-spacing: 3px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="glow-sphere-1"></div>
+    <div class="glow-sphere-2"></div>
+
+    <div id="deck-container">
+        <div id="progress-track"><div id="progress-fill"></div></div>
+
+        <div id="viewport">
+            </div>
+        
+        <div id="footer">
+            <button id="btn-prev" class="nav-btn" onclick="navigate(-1)">&#8592; Prev</button>
+            <div id="counter">01 / 30</div>
+            <button id="btn-next" class="nav-btn" onclick="navigate(1)">Next &#8594;</button>
+        </div>
+    </div>
+
+    <script>
+        const slideData = [
+            `
+            <span class="tag">Part III: Module 8.1</span>
+            <h1>Numerical Computation with NumPy</h1>
+            <h2>Day 8: Deep Dive into N-Dimensional Arrays</h2>
+            <p>Welcome to Part III. Today we step away from pure Python primitives to master the foundational array engine that accelerates modern Data Science and Machine Learning pipelines.</p>
+            `,
+            `
+            <h2>Day 8 Objectives</h2>
+            <ul>
+                <li>Understand why standard Python data structures fail at scale.</li>
+                <li>Analyze the hardware performance benefits of <span class="highlight">Contiguous Memory Allocation</span>.</li>
+                <li>Instantiate N-Dimensional Arrays (<code>ndarrays</code>) using targeted creation blocks.</li>
+                <li>Inspect structural metadata via core internal array attributes.</li>
+                <li>Execute high-speed mathematical transformations through <strong>Vectorization</strong> and <strong>Broadcasting</strong>.</li>
+            </ul>
+            `,
+            `
+            <h2>The Data Scalability Wall</h2>
+            <p>In Part I and Part II, we leveraged the standard Python <strong>List</strong> as our primary collection container. While useful for general scripting, lists introduce catastrophic bottlenecks when processing large datasets.</p>
+            <p>Machine Learning pipelines regularly manipulate matrices containing tens of millions of entries. Running basic mathematics across structures of this size using standard Python loops will cause severe compute delays.</p>
+            `,
+            `
+            <h2>Why Python Lists Fail at Scale</h2>
+            <p>Recall that a Python list does not physically store data values next to each other. It stores an array of scattered <span class="highlight">memory reference pointers</span> pointing to dynamic objects on the heap.</p>
+            <p>This layout forces the CPU to constantly perform expensive reference lookups on every loop iteration, fragmenting cache optimization and reducing data processing speeds.</p>
+            `,
+            `
+            <h2>The Type-Checking Bottleneck</h2>
+            <p>Because Python is dynamically typed, a list must remain flexible enough to hold mixed types simultaneously (e.g., an integer next to a string).</p>
+            <p>Consequently, every time a loop touches an item in a standard list, the interpreter must pause execution to analyze the object's type headers, creating significant performance overhead.</p>
+            `,
+            `
+            <h2>Introduction to NumPy</h2>
+            <p>To eliminate this computational overhead, the global open-source community relies on <strong>NumPy (Numerical Python)</strong>.</p>
+            <p>NumPy wraps high-performance, compiled C-level engines inside an intuitive Python interface, establishing the core data container that underpins almost all modern data toolkits (Pandas, Scikit-Learn, TensorFlow).</p>
+            `,
+            `
+            <h2>The Core Engine: ndarray</h2>
+            <p>The foundation of NumPy is the <span class="highlight">ndarray</span> (N-Dimensional Array) object.</p>
+            <p>Unlike standard lists, an ndarray enforces strict homogeneity: <span class="highlight">every single element inside the array must share the exact same data type</span> down to the bit-level. This constraint unlocks hardware-accelerated processing speeds.</p>
+            `,
+            `
+            <h2>Architecture: Contiguous Memory</h2>
+            <p>Because every element in an ndarray shares an identical type and size, NumPy allocates data inside a single, unbroken, <span class="highlight">contiguous block of physical memory</span>.</p>
+            <p>The system knows exactly how many bits separate one value from the next, allowing the CPU to instantly predict and stream data points into its high-speed cache registers without pointer lookups.</p>
+            `,
+            `
+            <h2>Importing the Ecosystem</h2>
+            <p>By universal developer convention, NumPy is imported into your scripts under the clean alias <code>np</code>.</p>
+            <div class="terminal">
+                <div class="terminal-header"><div class="dot dot-red"></div><div class="dot dot-yellow"></div><div class="dot dot-green"></div></div>
+                <pre><span class="kw">import</span> numpy <span class="kw">as</span> np
+
+<span class="cm"># Verify active environment integration</span>
+<span class="fn">print</span>(np.__version__)</pre>
+            </div>
+            `,
+            `
+            <span class="tag">Module 8.2</span>
+            <h2>Array Instantiation: Basic Conversion</h2>
+            <p>The most direct way to generate an ndarray is casting a pre-existing linear collection using the <code>np.array()</code> function block.</p>
+            <div class="terminal">
+                <div class="terminal-header"><div class="dot dot-red"></div><div class="dot dot-yellow"></div><div class="dot dot-green"></div></div>
+                <pre>raw_list <span class="op">=</span> [<span class="nm">10</span>, <span class="nm">20</span>, <span class="nm">30</span>, <span class="nm">40</span>]
+
+<span class="cm"># Instantiating a 1D Array cleanly</span>
+clean_array <span class="op">=</span> np.array(raw_list)
+<span class="fn">print</span>(clean_array)</pre>
+            </div>
+            `,
+            `
+            <h2>Multi-Dimensional Allocation</h2>
+            <p>Passing nested linear structures into the builder instantiates full multi-dimensional grids—such as 2D matrices or 3D tensor cubes.</p>
+            <div class="terminal">
+                <div class="terminal-header"><div class="dot dot-red"></div><div class="dot dot-yellow"></div><div class="dot dot-green"></div></div>
+                <pre>nested_matrix <span class="op">=</span> [[<span class="nm">1</span>, <span class="nm">2</span>, <span class="nm">3</span>], [<span class="nm">4</span>, <span class="nm">5</span>, <span class="nm">6</span>]]
+
+<span class="cm"># Allocating a 2D Matrix grid (Rows, Columns)</span>
+matrix_2d <span class="op">=</span> np.array(nested_matrix)
+<span class="fn">print</span>(matrix_2d)</pre>
+            </div>
+            `,
+            `
+            <h2>Placeholder Allocation: zeros()</h2>
+            <p>Allocating massive arrays by passing explicit lists is highly inefficient when designing fresh data containers. NumPy provides built-in space placeholders.</p>
+            <p><code>np.zeros()</code> pre-allocates an array of a specific size filled entirely with 0.0 values, directly preparing contiguous memory blocks for incoming metrics.</p>
+            `,
+            `
+            <h2>Placeholder Allocation: ones()</h2>
+            <p>Similarly, <code>np.ones()</code> pre-allocates blocks filled entirely with 1.0 values. To specify structural dimensions, pass a tuple detailing the desired shape layout.</p>
+            <div class="terminal">
+                <div class="terminal-header"><div class="dot dot-red"></div><div class="dot dot-yellow"></div><div class="dot dot-green"></div></div>
+                <pre><span class="cm"># Allocate a 2D structural block containing 3 rows and 4 columns</span>
+matrix_ones <span class="op">=</span> np.ones((<span class="nm">3</span>, <span class="nm">4</span>))
+<span class="fn">print</span>(matrix_ones)</pre>
+            </div>
+            `,
+            `
+            <h2>Sequential Progression: arange()</h2>
+            <p>NumPy's highly optimized <code>np.arange(start, stop, step)</code> generates numerical sequence grids natively within contiguous memory, replacing slower core <code>range()</code> calls.</p>
+            <div class="terminal">
+                <div class="terminal-header"><div class="dot dot-red"></div><div class="dot dot-yellow"></div><div class="dot dot-green"></div></div>
+                <pre><span class="cm"># Generates sequence from 0 up to exclusive 10, stepping by 2</span>
+seq_array <span class="op">= np.arange(<span class="nm">0</span>, <span class="nm">10</span>, <span class="nm">2</span>)
+<span class="fn">print</span>(seq_array) <span class="cm"># [0, 2, 4, 6, 8]</span></pre>
+            </div>
+            `,
+            `
+            <h2>Linear Intervals: linspace()</h2>
+            <p>Crucial for mapping optimization loss graphs or plotting decision boundaries, <code>np.linspace(start, stop, num)</code> generates a specific number of evenly spaced values over a specified interval. Crucially, the stop value is <span class="highlight">inclusive</span>.</p>
+            <div class="terminal">
+                <div class="terminal-header"><div class="dot dot-red"></div><div class="dot dot-yellow"></div><div class="dot dot-green"></div></div>
+                <pre><span class="cm"># Isolate exactly 5 values distributed evenly between 0 and 1</span>
+intervals <span class="op">= np.linspace(<span class="nm">0</span>, <span class="nm">1</span>, <span class="nm">5</span>)
+<span class="fn">print</span>(intervals) <span class="cm"># [0.  0.25 0.5  0.75 1. ]</span></pre>
+            </div>
+            `,
+            `
+            <span class="tag">Module 8.3</span>
+            <h2>Structural Metadata Attributes</h2>
+            <p>Every ndarray carries lightweight properties detailing its layout. To query an array's dimensions, check the <code>ndim</code> attribute.</p>
+            <p>To inspect the precise structural shape configuration, extract the <code>shape</code> attribute, which returns a tuple detailing the array size across each dimension.</p>
+            `,
+            `
+            <h2>Inspecting Shapes and Dimensions</h2>
+            <div class="terminal">
+                <div class="terminal-header"><div class="dot dot-red"></div><div class="dot dot-yellow"></div><div class="dot dot-green"></div></div>
+                <pre>sample <span class="op">=</span> np.array([[<span class="nm">1</span>, <span class="nm">2</span>], [<span class="nm">3</span>, <span class="nm">4</span>], [<span class="nm">5</span>, <span class="nm">6</span>]])
+
+<span class="fn">print</span>(sample.ndim)   <span class="cm"># Output: 2 (Two-dimensional matrix)</span>
+<span class="fn">print</span>(sample.shape)  <span class="cm"># Output: (3, 2) -> 3 rows, 2 columns</span></pre>
+            </div>
+            `,
+            `
+            <h2>The Data Type Flag: dtype</h2>
+            <p>The <code>dtype</code> attribute details the exact data type assigned to every element inside the contiguous memory block.</p>
+            <p>By default, if you construct an array of integers, NumPy automatically maps it to a standard 64-bit precision block (<code>int64</code> or <code>int32</code> depending on host machine OS defaults).</p>
+            `,
+            `
+            <h2>Optimizing RAM Footprints</h2>
+            <p>Standard Python floats use 64 bits of memory. In massive data pipelines, you can cut your RAM consumption in half by explicitly downcasting elements to 32-bit alternatives (<code>float32</code>) during array creation.</p>
+            <div class="terminal">
+                <div class="terminal-header"><div class="dot dot-red"></div><div class="dot dot-yellow"></div><div class="dot dot-green"></div></div>
+                <pre><span class="cm"># Enforcing a memory-optimized footprint</span>
+optimized_arr <span class="op">=</span> np.array([<span class="nm">1.5</span>, <span class="nm">2.7</span>, <span class="nm">3.9</span>], dtype<span class="op">=</span>np.float32)
+<span class="fn">print</span>(optimized_arr.dtype) <span class="cm"># float32</span></pre>
+            </div>
+            `,
+            `
+            <span class="tag">Module 8.4</span>
+            <h2>Vectorization: Loop Elimination</h2>
+            <p>The defining power of NumPy is <span class="highlight">Vectorization</span>. It allows you to run arithmetic operations across entire arrays without writing a single slow <code>for</code> loop in Python.</p>
+            <p>When you add two ndarrays together, the arithmetic is pushed directly down to compiled, low-level C code that processes the values simultaneously.</p>
+            `,
+            `
+            <h2>Vectorization in Action</h2>
+            <div class="terminal">
+                <div class="terminal-header"><div class="dot dot-red"></div><div class="dot dot-yellow"></div><div class="dot dot-green"></div></div>
+                <pre>salaries <span class="op">=</span> np.array([<span class="nm">50000</span>, <span class="nm">60000</span>, <span class="nm">75000</span>])
+
+<span class="cm"># Apply a 10% raise across all elements simultaneously</span>
+updated_salaries <span class="op">=</span> salaries <span class="op">*</span> <span class="nm">1.10</span>
+<span class="fn">print</span>(updated_salaries)</pre>
+            </div>
+            `,
+            `
+            <h2>Element-Wise Matrix Arithmetic</h2>
+            <p>Vectorized math operations are executed element-by-element across matching positions within your arrays.</p>
+            <div class="terminal">
+                <div class="terminal-header"><div class="dot dot-red"></div><div class="dot dot-yellow"></div><div class="dot dot-green"></div></div>
+                <pre>a <span class="op">=</span> np.array([<span class="nm">1</span>, <span class="nm">2</span>, <span class="nm">3</span>])
+b <span class="op">=</span> np.array([<span class="nm">10</span>, <span class="nm">20</span>, <span class="nm">30</span>])
+
+<span class="fn">print</span>(a <span class="op">+</span> b) <span class="cm"># Element-wise addition: [11, 22, 33]</span>
+<span class="fn">print</span>(a <span class="op">*</span> b) <span class="cm"># Element-wise multiplication: [10, 40, 90]</span></pre>
+            </div>
+            `,
+            `
+            <h2>Universal Functions (ufuncs)</h2>
+            <p>NumPy includes highly optimized mathematical functions called <strong>Universal Functions (ufuncs)</strong> that compute advanced mathematical operations across arrays at hardware speed.</p>
+            <div class="terminal">
+                <div class="terminal-header"><div class="dot dot-red"></div><div class="dot dot-yellow"></div><div class="dot dot-green"></div></div>
+                <pre>features <span class="op">=</span> np.array([<span class="nm">1</span>, <span class="nm">2</span>, <span class="nm">3</span>])
+
+<span class="fn">print</span>(np.exp(features)) <span class="cm"># Exponential transformation: e^x</span>
+<span class="fn">print</span>(np.log(features)) <span class="cm"># Natural logarithm transformation</span></pre>
+            </div>
+            `,
+            `
+            <span class="tag">Module 8.5</span>
+            <h2>Introduction to Broadcasting</h2>
+            <p>Element-wise operations require arrays to match shapes exactly. But what happens if you try to perform arithmetic between arrays of different shapes?</p>
+            <p>NumPy uses a powerful evaluation mechanism called <span class="highlight">Broadcasting</span> to handle operations on arrays of different dimensions safely and efficiently.</p>
+            `,
+            `
+            <h2>The Mechanics of Broadcasting</h2>
+            <p>During broadcasting, NumPy virtually stretches or replicates the smaller array across the dimensions of the larger one so they achieve compatible shapes.</p>
+            <p>Crucially, this stretching is a logical operation: <span class="highlight">no data is actually duplicated in memory</span>, preserving your application's RAM footprint.</p>
+            `,
+            `
+            <h2>The Two Rules of Compatibility</h2>
+            <p>Two dimensions are compatible for broadcasting if:</p>
+            <ol>
+                <li>They are <span class="highlight">exactly equal</span> in size, OR</li>
+                <li>One of the dimensions is <span class="highlight">exactly 1</span>.</li>
+            </ol>
+            <p>NumPy compares their shapes axis-by-axis, starting from the trailing (rightmost) dimensions and working backward.</p>
+            `,
+            `
+            <h2>Broadcasting a Scalar to a Matrix</h2>
+            <div class="terminal">
+                <div class="terminal-header"><div class="dot dot-red"></div><div class="dot dot-yellow"></div><div class="dot dot-green"></div></div>
+                <pre>matrix <span class="op">=</span> np.array([[<span class="nm">10</span>, <span class="nm">20</span>], [<span class="nm">30</span>, <span class="nm">40</span>]]) <span class="cm"># Shape: (2, 2)</span>
+scalar <span class="op">=</span> <span class="nm">5</span>                              <span class="cm"># Shape: (1,)</span>
+
+<span class="cm"># The scalar 5 is broadcast across all four matrix entries</span>
+<span class="fn">print</span>(matrix <span class="op">+</span> scalar) 
+<span class="cm"># Output: [[15, 25], [35, 45]]</span></pre>
+            </div>
+            `,
+            `
+            <h2>Matrix & Vector Broadcasting</h2>
+            <div class="terminal">
+                <div class="terminal-header"><div class="dot dot-red"></div><div class="dot dot-yellow"></div><div class="dot dot-green"></div></div>
+                <pre>grid <span class="op">=</span> np.array([[<span class="nm">1</span>, <span class="nm">2</span>, <span class="nm">3</span>], [<span class="nm">4</span>, <span class="nm">5</span>, <span class="nm">6</span>]]) <span class="cm"># Shape: (2, 3)</span>
+row_vector <span class="op">=</span> np.array([<span class="nm">10</span>, <span class="nm">20</span>, <span class="nm">30</span>])     <span class="cm"># Shape: (3,)</span>
+
+<span class="cm"># row_vector is broadcast down across both rows automatically</span>
+<span class="fn">print</span>(grid <span class="op">+</span> row_vector)
+<span class="cm"># Output: [[11, 22, 33], [14, 25, 36]]</span></pre>
+            </div>
+            `,
+            `
+            <h2>Day 8 Summary</h2>
+            <ul>
+                <li><strong>The Bottleneck:</strong> Python lists use slow reference pointers that break performance at scale.</li>
+                <li><strong>The Fix:</strong> NumPy ndarrays enforce data homogeneity to allocate contiguous blocks of physical memory.</li>
+                <li><strong>Attributes:</strong> Monitor array shape layouts using <code>.shape</code>, and manage data precision footprints via <code>.dtype</code>.</li>
+                <li><strong>Operations:</strong> Vectorization replaces slow Python loops with high-speed, compiled C transitions, utilizing Broadcasting to manage mismatched array dimensions efficiently.</li>
+            </ul>
+            `,
+            `
+            <h2>Next Steps & Lab Setup</h2>
+            <p><span class="highlight">Practical Deliverables:</span></p>
+            <ol>
+                <li>Instantiate an array of 20 sequential integers using <code>np.arange()</code>, and query its <code>shape</code> and <code>dtype</code> attributes.</li>
+                <li>Generate a 3x3 matrix initialized to 1.0 values. Use broadcasting to multiply the entire grid by a single scalar factor.</li>
+            </ol>
+            <p><em>Prepare for Day 9: Tabular Mastery via Pandas Architecture (Series & DataFrames).</em></p>
+            `
+        ];
+
+        let currentIndex = 0;
+        const viewport = document.getElementById('viewport');
+        const progressFill = document.getElementById('progress-fill');
+        const counter = document.getElementById('counter');
+        const btnPrev = document.getElementById('btn-prev');
+        const btnNext = document.getElementById('btn-next');
+
+        function initDeck() {
+            slideData.forEach((htmlContent, index) => {
+                const slideDiv = document.createElement('div');
+                slideDiv.className = 'slide';
+                slideDiv.id = 'slide-' + index;
+                slideDiv.innerHTML = htmlContent;
+                viewport.appendChild(slideDiv);
+            });
+            updateState();
+        }
+
+        function navigate(step) {
+            const nextIndex = currentIndex + step;
+            if (nextIndex >= 0 && nextIndex < slideData.length) {
+                currentIndex = nextIndex;
+                updateState();
+            }
+        }
+
+        function updateState() {
+            const slides = document.querySelectorAll('.slide');
+            slides.forEach((slide, index) => {
+                if (index === currentIndex) {
+                    slide.classList.add('active');
+                    slide.style.transform = 'translateX(0)';
+                } else if (index < currentIndex) {
+                    slide.classList.remove('active');
+                    slide.style.transform = 'translateX(-50px)';
+                } else {
+                    slide.classList.remove('active');
+                    slide.style.transform = 'translateX(50px)';
+                }
+            });
+
+            const percent = ((currentIndex + 1) / slideData.length) * 100;
+            progressFill.style.width = percent + '%';
+
+            const formattedCurrent = (currentIndex + 1).toString().padStart(2, '0');
+            counter.innerText = formattedCurrent + ' / ' + slideData.length;
+
+            btnPrev.disabled = currentIndex === 0;
+            btnNext.disabled = currentIndex === slideData.length - 1;
+        }
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowRight' || e.key === ' ') navigate(1);
+            if (e.key === 'ArrowLeft') navigate(-1);
+        });
+
+        initDeck();
+    </script>
+</body>
+</html>
